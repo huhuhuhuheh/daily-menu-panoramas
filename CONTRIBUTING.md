@@ -6,7 +6,9 @@ The basic guidelines you need to follow     before you submit:
 - The Panorama doesn't look any crisp or bad quality in some way
 - If the building is from someone that you got allowed to take a shot of, ensure you put on the PR request, or if is it from a map, include its source
 
-If your shot is for any event/or season, please ensure you place it on the right folder before doing the PR, located at `src/main/resources/assets/daily_menu_panoramas/textures/gui/title/background/events` or `src/main/resources/assets/daily_menu_panoramas/textures/gui/title/background/seasons`
+If your shot is for any event/or season, please ensure you place it on the right folder before doing the PR, usually located at one of those folders:
+- `src/main/resources/assets/daily_menu_panoramas/textures/gui/title/background/events`
+- `src/main/resources/assets/daily_menu_panoramas/textures/gui/title/background/seasons`
 
 if your shot is not for any event/or season, follow the basic things before you PR:
 
