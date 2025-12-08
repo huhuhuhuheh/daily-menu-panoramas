@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "daily_menu_panoramas",
+  "version": "${version}",
+  "name": "Daily Menu Panoramas",
+  "description": "Tired of those Mojang Panoramas? Yeah me too",
+  "authors": [
+    "Swilia"
+  ],
+  "contact": {
+    "homepage": "https://modrinth.com/project/bsrPC26E",
+    "sources": "https://github.com/huhuhuhuheh/daily-menu-panoramas",
+    "issues": "https://github.com/huhuhuhuheh/daily-menu-panoramas/issues"
+  },
+  "license": "MIT",
+  "icon": "assets/daily_menu_panoramas/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "net.swilia.dailymenupanoramas.client.DailyMenuPanoramasClient"
+    ],
+    "main": [
+      "net.swilia.dailymenupanoramas.DailyMenuPanoramas"
+    ]
+  },
+  "mixins": [
+    "daily_menu_panoramas.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-language-kotlin": ">=${kotlin_loader_version}",
+    "fabric": "*",
+    "minecraft": "~${minecraft_version}"
+  }
+}

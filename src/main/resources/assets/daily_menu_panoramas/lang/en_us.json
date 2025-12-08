@@ -1,0 +1,14 @@
+{
+  "text.daily_menu_panoramas.contrib.title": "Wanna help in the mod?",
+  "text.daily_menu_panoramas.contrib.text_p1": "If you are seeing this screen now, you're lucky now! that tells that this ran!\n\nAnyways jokes out of the way, for some context, i wanted to do this mod for like months because i want to know if i can \"actually\" change the panorama screen daily instead of the usual Mojang ones, when i tried, i kinda failed and then deleted the project and refused to go back at that time to go and fix it\n\nEither way, the panoramas are ALL created from a single person from whatever world generated (or server) they want to do the shot on, i do this alone so i can't put over like 50 panoramas all in once, and if you don't really mind, please would you mind to contribute to this project?\n\n(The entire thing is open source)\n\nYes really! You can contribute to put new panoramas, or do translations if you really want\n\nIf so you are free to click \"View Source\"",
+  "text.daily_menu_panoramas.contrib.text_p2": "You are also free to donate to me (in case you don't want to contribute), i dont usually get payments neither ask for some minimal \"<insert dollar here> may help\" shitty, you can donate whatever you want if you really want to\n\nBy the way you can disable seeing this screen below before u go to whatever u are doing, but i may miss you if so <3",
+  "text.daily_menu_panoramas.contrib.source": "View Source",
+  "text.daily_menu_panoramas.contrib.next": "Next >",
+  "text.daily_menu_panoramas.contrib.kofi": "Ko-Fi",
+  "text.daily_menu_panoramas.contrib.paypal": "PayPal",
+  "text.daily_menu_panoramas.contrib.continue": "Continue to Game",
+  "text.daily_menu_panoramas.contrib.dont_show": "Don't show this again",
+  "modmenu.nameTranslation.daily_menu_panoramas": "Daily Menu Panoramas",
+  "modmenu.descriptionTranslation.daily_menu_panoramas": "Tired of those Mojang Panoramas? Yeah me too",
+  "modmenu.summaryTranslation.daily_menu_panoramas": "More Panoramas!"
+}

@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "net.swilia.dailymenupanoramas.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "TitleScreenMixin",
+    "CubeMapRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
