@@ -1,5 +1,5 @@
 ## Daily Menu Panoramas
-![Last Release](https://img.shields.io/github/v/release/huhuhuhuheh/ehclipboard)
+![Last Release](https://img.shields.io/github/v/release/huhuhuhuheh/daily-menu-panoramas)
 ![Issues](https://img.shields.io/github/issues/huhuhuhuheh/daily-menu-panoramas?style=flat&color=orange)
 [![Supported Minecraft](https://img.shields.io/badge/Minecraft-1.21.5_--_1.21.10-purple?style=flat)](https://modrinth.com/project/bsrPC26E)
 
