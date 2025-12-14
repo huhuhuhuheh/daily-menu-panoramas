@@ -1,11 +1,13 @@
 ## Daily Menu Panoramas
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/2dd6156a-7a41-46f2-900b-fefe554f4c86" />
+
 ![Last Release](https://img.shields.io/github/v/release/huhuhuhuheh/daily-menu-panoramas)
 ![Issues](https://img.shields.io/github/issues/huhuhuhuheh/daily-menu-panoramas?style=flat&color=orange)
-[![Supported Minecraft](https://img.shields.io/badge/Minecraft-1.21.5_--_1.21.10-purple?style=flat)](https://modrinth.com/project/bsrPC26E)
+[![Supported Minecraft](https://img.shields.io/badge/Minecraft-1.21.5_--_1.21.11-purple?style=flat)](https://modrinth.com/project/bsrPC26E)
 
 Source for the mod that changes your panorama daily, or by season or event!
 
-You can download this on [Modrinth](https://modrinth.com/project/bsrPC26E) or via the [releases](https://github.com/huhuhuhuheh/daily-menu-panoramas/releases) tab
+You can download this on [Modrinth](https://modrinth.com/project/bsrPC26E), [CurseForge](https://www.curseforge.com/minecraft/mc-mods/daily-menu-panoramas) or via the [releases](https://github.com/huhuhuhuheh/daily-menu-panoramas/releases) tab
 
 ## How to run or compile
 Fork the repo by using Git:
