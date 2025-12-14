@@ -11,7 +11,7 @@ import kotlin.jvm.JvmStatic
 
 object PanoramaLogic {
     private const val MOD_ID = "daily_menu_panoramas"
-    private const val NUM_NUMERIC_PANORAMAS = 11
+    private const val NUM_NUMERIC_PANORAMAS = 12
     private const val MAX_SCAN_INDEX = 1000
     private const val MAX_CONSECUTIVE_MISSES = 20
     private var cachedNumericIndices: List<Int>? = null
