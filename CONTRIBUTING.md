@@ -22,4 +22,4 @@ private const val NUM_NUMERIC_PANORAMAS = 11
 
 
 ## For Translations
-Those are done to Weblate
+Those are done to [Weblate](https://hosted.weblate.org/projects/daily-menu-panoramas/translations/) (testing)
