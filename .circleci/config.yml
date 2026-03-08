@@ -39,26 +39,22 @@ jobs:
           name: Add label and post initial comment
           command: |
             PR_NUMBER=$CIRCLE_PR_NUMBER
-
-            echo "PR number is: $PR_NUMBER"
             echo $PR_NUMBER > /tmp/pr_number
 
             curl -s -X POST \
               -H "Authorization: token $GH_TOKEN" \
               -H "Content-Type: application/json" \
               "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/issues/$PR_NUMBER/labels" \
-              -d '{"labels":["New Panorama"]}'
+              -d '{"labels":["New Panorama"]}' > /dev/null
 
-            printf '{"body":"Panorama submission detected. Running a build to check if everything compiles correctly. Please wait."}' > /tmp/comment_body.json
+            printf "{\"body\":\"Panorama submission detected. Running a build to check if everything compiles correctly. Please wait.\n\n---\n*This is an automated check run by [CircleCI]($CIRCLE_BUILD_URL).*\"}" > /tmp/comment_body.json
 
-            COMMENT_RESPONSE=$(curl -s -X POST \
+            curl -s -X POST \
               -H "Authorization: token $GH_TOKEN" \
               -H "Content-Type: application/json" \
               "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/issues/$PR_NUMBER/comments" \
-              -d @/tmp/comment_body.json)
-
-            echo "$COMMENT_RESPONSE"
-            echo "$COMMENT_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])" > /tmp/comment_id
+              -d @/tmp/comment_body.json \
+              | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])" > /tmp/comment_id
 
       - run:
           name: Build
@@ -69,19 +65,31 @@ jobs:
           command: |
             PR_NUMBER=$(cat /tmp/pr_number)
 
-            printf '{"body":"Build passed. The submission looks good and is ready to be reviewed. The owner will take a look when available."}' > /tmp/success_body.json
+            printf "{\"body\":\"Build passed. The submission looks good and is ready to be reviewed. The owner will take a look when available.\n\n---\n*This is an automated check run by [CircleCI]($CIRCLE_BUILD_URL).*\"}" > /tmp/success_body.json
 
             curl -s -X PATCH \
               -H "Authorization: token $GH_TOKEN" \
               -H "Content-Type: application/json" \
               "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/issues/comments/$(cat /tmp/comment_id)" \
-              -d @/tmp/success_body.json \
+              -d @/tmp/success_body.json > /dev/null
 
             curl -s -X POST \
               -H "Authorization: token $GH_TOKEN" \
               -H "Content-Type: application/json" \
               "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/issues/$PR_NUMBER/assignees" \
-              -d '{"assignees":["huhuhuhuheh"]}'
+              -d '{"assignees":["huhuhuhuheh"]}' > /dev/null
+
+      - run:
+          name: Post failure comment
+          command: |
+            printf "{\"body\":\"Build failed. The submission could not be compiled. Check your changes and push a fix.\n\n---\n*This is an automated check run by [CircleCI]($CIRCLE_BUILD_URL). You can view the full build output there.*\"}" > /tmp/fail_body.json
+
+            curl -s -X PATCH \
+              -H "Authorization: token $GH_TOKEN" \
+              -H "Content-Type: application/json" \
+              "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/issues/comments/$(cat /tmp/comment_id)" \
+              -d @/tmp/fail_body.json > /dev/null
+          when: on_fail
 
 workflows:
   panorama-check:
