@@ -39,8 +39,8 @@ jobs:
           name: Add label and post initial comment
           command: |
             PR_NUMBER=$(curl -s -H "Authorization: token $GH_TOKEN" \
-              "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls?head=$CIRCLE_PROJECT_USERNAME:$CIRCLE_BRANCH&state=open" \
-              | python3 -c "import sys,json; prs=json.load(sys.stdin); print(prs[0]['number']) if prs else sys.exit(1)")
+              "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls?state=open" \
+              | python3 -c "import sys,json; prs=[p for p in json.load(sys.stdin) if p['head']['ref']=='$CIRCLE_BRANCH']; print(prs[0]['number']) if prs else sys.exit(1)")
 
             echo $PR_NUMBER > /tmp/pr_number
 
