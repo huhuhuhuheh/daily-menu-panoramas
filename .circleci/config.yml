@@ -59,7 +59,9 @@ jobs:
 
       - run:
           name: Build
-          command: ./gradlew build
+          command: |
+            chmod +x gradlew
+            ./gradlew build
 
       - run:
           name: Update comment and assign on success
