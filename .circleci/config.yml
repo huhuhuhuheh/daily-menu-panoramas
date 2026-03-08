@@ -1,0 +1,90 @@
+version: 2.1
+
+jobs:
+  check-panorama:
+    docker:
+      - image: cimg/openjdk:21.0
+    steps:
+      - checkout
+
+      - run:
+          name: Check for panorama changes
+          command: |
+            CHANGED=$(git diff --name-only origin/main...HEAD)
+
+            NUMERIC_CHANGED=$(echo "$CHANGED" | grep -E "src/main/resources/assets/daily_menu_panoramas/textures/gui/title/background/numeric/[0-9]+/panorama_[0-5]\.png" || true)
+            EVENTS_CHANGED=$(echo "$CHANGED" | grep -E "src/main/resources/assets/daily_menu_panoramas/textures/gui/title/background/events/.*/panorama_[0-5]\.png" || true)
+            SEASONS_CHANGED=$(echo "$CHANGED" | grep -E "src/main/resources/assets/daily_menu_panoramas/textures/gui/title/background/seasons/.*/panorama_[0-5]\.png" || true)
+            LOGIC_CHANGED=$(echo "$CHANGED" | grep "PanoramaLogic.kt" || true)
+
+            if [ -z "$NUMERIC_CHANGED" ] && [ -z "$EVENTS_CHANGED" ] && [ -z "$SEASONS_CHANGED" ]; then
+              echo "No panorama files changed. Halting."
+              circleci step halt
+            fi
+
+            if [ -z "$LOGIC_CHANGED" ]; then
+              echo "PanoramaLogic.kt was not modified. Halting."
+              circleci step halt
+            fi
+
+            LINE=$(sed -n '14p' src/main/kotlin/net/swilia/dailymenupanoramas/client/PanoramaLogic.kt)
+            if ! echo "$LINE" | grep -qE "private const val NUM_NUMERIC_PANORAMAS = [0-9]+"; then
+              echo "Line 14 of PanoramaLogic.kt does not look valid. Halting."
+              circleci step halt
+            fi
+
+            echo "Panorama changes detected. Proceeding."
+
+      - run:
+          name: Add label and post initial comment
+          command: |
+            PR_NUMBER=$(curl -s -H "Authorization: token $GH_TOKEN" \
+              "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls?head=$CIRCLE_PROJECT_USERNAME:$CIRCLE_BRANCH&state=open" \
+              | python3 -c "import sys,json; prs=json.load(sys.stdin); print(prs[0]['number']) if prs else sys.exit(1)")
+
+            echo $PR_NUMBER > /tmp/pr_number
+
+            curl -s -X POST \
+              -H "Authorization: token $GH_TOKEN" \
+              -H "Content-Type: application/json" \
+              "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/issues/$PR_NUMBER/labels" \
+              -d '{"labels":["New Panorama"]}'
+
+            COMMENT_ID=$(curl -s -X POST \
+              -H "Authorization: token $GH_TOKEN" \
+              -H "Content-Type: application/json" \
+              "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/issues/$PR_NUMBER/comments" \
+              -d '{"body":"Panorama submission detected. Running a build to check if everything compiles correctly. Please wait."}' \
+              | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+
+            echo $COMMENT_ID > /tmp/comment_id
+
+      - run:
+          name: Build
+          command: ./gradlew build
+
+      - run:
+          name: Update comment and assign on success
+          command: |
+            PR_NUMBER=$(cat /tmp/pr_number)
+            COMMENT_ID=$(cat /tmp/comment_id)
+
+            curl -s -X PATCH \
+              -H "Authorization: token $GH_TOKEN" \
+              -H "Content-Type: application/json" \
+              "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/issues/comments/$COMMENT_ID" \
+              -d '{"body":"Build passed. The submission looks good and is ready to be reviewed. The owner will take a look when available."}' \
+
+            curl -s -X POST \
+              -H "Authorization: token $GH_TOKEN" \
+              -H "Content-Type: application/json" \
+              "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/issues/$PR_NUMBER/assignees" \
+              -d '{"assignees":["huhuhuhuheh"]}'
+
+workflows:
+  panorama-check:
+    jobs:
+      - check-panorama:
+          filters:
+            branches:
+              ignore: main
