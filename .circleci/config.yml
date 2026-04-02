@@ -1,145 +1,127 @@
 version: 2.1
-
 jobs:
   check-panorama:
     docker:
       - image: cimg/openjdk:21.0
     steps:
       - checkout
-
       - run:
           name: Check for panorama changes
           command: |
+            git fetch origin main
             CHANGED=$(git diff --name-only origin/main...HEAD)
-
             NUMERIC_CHANGED=$(echo "$CHANGED" | grep -E "src/main/resources/assets/daily_menu_panoramas/textures/gui/title/background/numeric/[0-9]+/panorama_[0-5]\.png" || true)
             EVENTS_CHANGED=$(echo "$CHANGED" | grep -E "src/main/resources/assets/daily_menu_panoramas/textures/gui/title/background/events/.*/panorama_[0-5]\.png" || true)
             SEASONS_CHANGED=$(echo "$CHANGED" | grep -E "src/main/resources/assets/daily_menu_panoramas/textures/gui/title/background/seasons/.*/panorama_[0-5]\.png" || true)
             LOGIC_CHANGED=$(echo "$CHANGED" | grep "PanoramaLogic.kt" || true)
-
-            if [ -z "$NUMERIC_CHANGED" ] &&[ -z "$EVENTS_CHANGED" ] && [ -z "$SEASONS_CHANGED" ]; then
+            if [ -z "$NUMERIC_CHANGED" ] && [ -z "$EVENTS_CHANGED" ] && [ -z "$SEASONS_CHANGED" ]; then
               echo "No panorama files changed. Halting."
               circleci step halt
             fi
-
-            if[ -z "$LOGIC_CHANGED" ]; then
+            if [ -z "$LOGIC_CHANGED" ]; then
               echo "PanoramaLogic.kt was not modified. Halting."
               circleci step halt
             fi
-
             LINE=$(sed -n '14p' src/main/kotlin/net/swilia/dailymenupanoramas/client/PanoramaLogic.kt)
-            if ! echo "$LINE" | grep -qE "private const val NUM_NUMERIC_PANORAMAS =[0-9]+"; then
+            if ! echo "$LINE" | grep -qE "private const val NUM_NUMERIC_PANORAMAS = [0-9]+"; then
               echo "Line 14 of PanoramaLogic.kt does not look valid. Halting."
               circleci step halt
             fi
-
             echo "Panorama changes detected. Proceeding."
-
       - run:
           name: Remove stale labels and post initial comment
           command: |
-            PR_NUMBER=$CIRCLE_PR_NUMBER
+            if [ -n "$CIRCLE_PULL_REQUEST" ]; then
+              PR_NUMBER=${CIRCLE_PULL_REQUEST##*/}
+            else
+              PR_NUMBER=$CIRCLE_PR_NUMBER
+            fi
             echo $PR_NUMBER > /tmp/pr_number
-
             curl -s -X DELETE \
               -H "Authorization: token $GH_TOKEN" \
               "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/issues/$PR_NUMBER/labels/Check%20failed" > /dev/null 2>&1 || true
-
             curl -s -X POST \
               -H "Authorization: token $GH_TOKEN" \
               -H "Content-Type: application/json" \
               "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/issues/$PR_NUMBER/labels" \
               -d '{"labels":["New Panorama"]}' > /dev/null
-
             python3 << PYEOF
-            import json, os
-            url = os.environ.get('CIRCLE_BUILD_URL', '')
-            body = (
-                "Panorama submission detected. Running a build to check if everything compiles correctly. Please wait.\n\n"
-                f"###### *This is an automated check run by [CircleCI]({url}).*"
-            )
-            with open('/tmp/comment_body.json', 'w') as f:
-                json.dump({"body": body}, f)
-            PYEOF
-
+import json, os
+url = os.environ.get('CIRCLE_BUILD_URL', '')
+body = (
+    "Panorama submission detected. Running a build to check if everything compiles correctly. Please wait.\n\n"
+    f"###### *This is an automated check run by [CircleCI]({url}).*"
+)
+with open('/tmp/comment_body.json', 'w') as f:
+    json.dump({"body": body}, f)
+PYEOF
             curl -s -X POST \
               -H "Authorization: token $GH_TOKEN" \
               -H "Content-Type: application/json" \
               "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/issues/$PR_NUMBER/comments" \
               -d @/tmp/comment_body.json > /dev/null
-
       - run:
           name: Build
           command: |
             set -o pipefail
             chmod +x gradlew
             ./gradlew build 2>&1 | tee /tmp/build_output.txt
-
       - run:
           name: Post success comment
           command: |
             PR_NUMBER=$(cat /tmp/pr_number)
-
             curl -s -X POST \
               -H "Authorization: token $GH_TOKEN" \
               -H "Content-Type: application/json" \
               "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/issues/$PR_NUMBER/labels" \
               -d '{"labels":["Panorama Submission Passes"]}' > /dev/null
-
             python3 << PYEOF
-            import json, os
-            url = os.environ.get('CIRCLE_BUILD_URL', '')
-            body = (
-                "Build passed. The submission looks good and is ready to be reviewed. The owner will take a look when available.\n\n"
-                f"###### *This is an automated check run by [CircleCI]({url}).*"
-            )
-            with open('/tmp/success_body.json', 'w') as f:
-                json.dump({"body": body}, f)
-            PYEOF
-
+import json, os
+url = os.environ.get('CIRCLE_BUILD_URL', '')
+body = (
+    "Build passed. The submission looks good and is ready to be reviewed. The owner will take a look when available.\n\n"
+    f"###### *This is an automated check run by [CircleCI]({url}).*"
+)
+with open('/tmp/success_body.json', 'w') as f:
+    json.dump({"body": body}, f)
+PYEOF
             curl -s -X POST \
               -H "Authorization: token $GH_TOKEN" \
               -H "Content-Type: application/json" \
               "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/issues/$PR_NUMBER/comments" \
               -d @/tmp/success_body.json > /dev/null
-
             curl -s -X POST \
               -H "Authorization: token $GH_TOKEN" \
               -H "Content-Type: application/json" \
               "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/issues/$PR_NUMBER/assignees" \
               -d '{"assignees":["huhuhuhuheh"]}' > /dev/null
-
       - run:
           name: Post failure comment
           command: |
             PR_NUMBER=$(cat /tmp/pr_number)
-
             curl -s -X POST \
               -H "Authorization: token $GH_TOKEN" \
               -H "Content-Type: application/json" \
               "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/issues/$PR_NUMBER/labels" \
               -d '{"labels":["Check failed"]}' > /dev/null
-
             python3 << PYEOF
-            import json, os
-            url = os.environ.get('CIRCLE_BUILD_URL', '')
-            log = open('/tmp/build_output.txt').read() if os.path.exists('/tmp/build_output.txt') else 'Build output not available.'
-            body = (
-                "Build failed. The submission could not be compiled. Check your changes and push a fix.\n\n"
-                "<details>\n<summary>Build output</summary>\n\n```\n" + log + "\n```\n</details>\n\n"
-                f"###### *This is an automated check run by [CircleCI]({url}). You can view the full build output there.*"
-            )
-            with open('/tmp/fail_body.json', 'w') as f:
-                json.dump({"body": body}, f)
-            PYEOF
-
+import json, os
+url = os.environ.get('CIRCLE_BUILD_URL', '')
+log = open('/tmp/build_output.txt').read() if os.path.exists('/tmp/build_output.txt') else 'Build output not available.'
+body = (
+    "Build failed. The submission could not be compiled. Check your changes and push a fix.\n\n"
+    "<details>\n<summary>Build output</summary>\n\n```\n" + log + "\n```\n</details>\n\n"
+    f"###### *This is an automated check run by [CircleCI]({url}). You can view the full build output there.*"
+)
+with open('/tmp/fail_body.json', 'w') as f:
+    json.dump({"body": body}, f)
+PYEOF
             curl -s -X POST \
               -H "Authorization: token $GH_TOKEN" \
               -H "Content-Type: application/json" \
               "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/issues/$PR_NUMBER/comments" \
               -d @/tmp/fail_body.json > /dev/null
           when: on_fail
-
 workflows:
   panorama-check:
     jobs:
