@@ -1,5 +1,6 @@
 ## Daily Menu Panoramas
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/2dd6156a-7a41-46f2-900b-fefe554f4c86" />
+<img alt="image" src="https://github.com/user-attachments/assets/2dd6156a-7a41-46f2-900b-fefe554f4c86" />
+
 
 ![Last Release](https://img.shields.io/github/v/release/huhuhuhuheh/daily-menu-panoramas)
 ![Issues](https://img.shields.io/github/issues/huhuhuhuheh/daily-menu-panoramas?style=flat&color=orange)
