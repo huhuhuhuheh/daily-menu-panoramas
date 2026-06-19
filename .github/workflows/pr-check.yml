@@ -1,0 +1,152 @@
+name: Panorama Check
+
+on:
+  pull_request:
+    branches-ignore:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check-panorama:
+    runs-on: ubuntu-latest
+    container:
+      image: cimg/openjdk:21.0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for panorama changes
+        id: check
+        run: |
+          git fetch origin main
+          CHANGED=$(git diff --name-only origin/main...HEAD)
+          NUMERIC_CHANGED=$(echo "$CHANGED" | grep -E "src/main/resources/assets/daily_menu_panoramas/textures/gui/title/background/numeric/[0-9]+/panorama_[0-5]\.png" || true)
+          EVENTS_CHANGED=$(echo "$CHANGED" | grep -E "src/main/resources/assets/daily_menu_panoramas/textures/gui/title/background/events/.*/panorama_[0-5]\.png" || true)
+          SEASONS_CHANGED=$(echo "$CHANGED" | grep -E "src/main/resources/assets/daily_menu_panoramas/textures/gui/title/background/seasons/.*/panorama_[0-5]\.png" || true)
+          LOGIC_CHANGED=$(echo "$CHANGED" | grep "PanoramaLogic.kt" || true)
+          if [ -z "$NUMERIC_CHANGED" ] && [ -z "$EVENTS_CHANGED" ] && [ -z "$SEASONS_CHANGED" ]; then
+            echo "No panorama files changed. Halting."
+            echo "detected=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          if [ -z "$LOGIC_CHANGED" ]; then
+            echo "PanoramaLogic.kt was not modified. Halting."
+            echo "detected=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          LINE=$(sed -n '14p' src/main/kotlin/net/swilia/dailymenupanoramas/client/PanoramaLogic.kt)
+          if ! echo "$LINE" | grep -qE "private const val NUM_NUMERIC_PANORAMAS = [0-9]+"; then
+            echo "Line 14 of PanoramaLogic.kt does not look valid. Halting."
+            echo "detected=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          echo "Panorama changes detected. Proceeding."
+          echo "detected=true" >> $GITHUB_OUTPUT
+
+      - name: Remove stale labels and post initial comment
+        if: steps.check.outputs.detected == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUILD_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          curl -s -X DELETE \
+            -H "Authorization: token $GH_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/$PR_NUMBER/labels/Check%20failed" || true
+          curl -s -X POST \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/$PR_NUMBER/labels" \
+            -d '{"labels":["New Panorama"]}'
+          cat << 'PYEOF' > /tmp/comment_body.py
+          import json, os
+          url = os.environ.get("BUILD_URL", "")
+          body = (
+              "Panorama submission detected. Running a build to check if everything compiles correctly. Please wait.\n\n"
+              f"###### *This is an automated check run by [GitHub Actions]({url}).*"
+          )
+          with open("/tmp/comment_body.json", "w") as f:
+              json.dump({"body": body}, f)
+          PYEOF
+          python3 /tmp/comment_body.py
+          curl -s -X POST \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/$PR_NUMBER/comments" \
+            -d @/tmp/comment_body.json
+
+      - name: Build
+        if: steps.check.outputs.detected == 'true'
+        run: |
+          set -o pipefail
+          chmod +x gradlew
+          ./gradlew build 2>&1 | tee /tmp/build_output.txt
+
+      - name: Post success comment
+        if: steps.check.outputs.detected == 'true' && success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUILD_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          curl -s -X POST \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/$PR_NUMBER/labels" \
+            -d '{"labels":["Panorama Submission Passes"]}'
+          cat << 'PYEOF' > /tmp/success_body.py
+          import json, os
+          url = os.environ.get("BUILD_URL", "")
+          body = (
+              "Build passed. The submission looks good and is ready to be reviewed. The owner will take a look when available.\n\n"
+              f"###### *This is an automated check run by [GitHub Actions]({url}).*"
+          )
+          with open("/tmp/success_body.json", "w") as f:
+              json.dump({"body": body}, f)
+          PYEOF
+          python3 /tmp/success_body.py
+          curl -s -X POST \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/$PR_NUMBER/comments" \
+            -d @/tmp/success_body.json
+          curl -s -X POST \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/$PR_NUMBER/assignees" \
+            -d '{"assignees":["huhuhuhuheh"]}'
+
+      - name: Post failure comment
+        if: steps.check.outputs.detected == 'true' && failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUILD_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          curl -s -X POST \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/$PR_NUMBER/labels" \
+            -d '{"labels":["Check failed"]}'
+          cat << 'PYEOF' > /tmp/fail_body.py
+          import json, os
+          url = os.environ.get("BUILD_URL", "")
+          log = open("/tmp/build_output.txt").read() if os.path.exists("/tmp/build_output.txt") else "Build output not available."
+          body = (
+              "Build failed. The submission could not be compiled. Check your changes and push a fix.\n\n"
+              "<details>\n<summary>Build output</summary>\n\n```\n" + log + "\n```\n</details>\n\n"
+              f"###### *This is an automated check run by [GitHub Actions]({url}).*"
+          )
+          with open("/tmp/fail_body.json", "w") as f:
+              json.dump({"body": body}, f)
+          PYEOF
+          python3 /tmp/fail_body.py
+          curl -s -X POST \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/$PR_NUMBER/comments" \
+            -d @/tmp/fail_body.json
