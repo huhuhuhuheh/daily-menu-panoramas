@@ -3,11 +3,8 @@ name: Publish
 on:
   push:
     branches: [main]
-<<<<<<< HEAD
     paths:
       - 'gradle.properties'
-=======
->>>>>>> 7b32efc345b0cecb8044f2ee483a810acfb51e38
 
 permissions:
   contents: write
@@ -15,10 +12,7 @@ permissions:
 
 jobs:
   publish:
-<<<<<<< HEAD
     if: github.actor == 'huhuhuhuheh'
-=======
->>>>>>> 7b32efc345b0cecb8044f2ee483a810acfb51e38
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -91,16 +85,11 @@ jobs:
             RANGE="$PREV_TAG..HEAD"
           fi
           git log $RANGE --pretty=format:"- %s ([%h](${{ github.server_url }}/${{ github.repository }}/commit/%H))" --reverse > /tmp/changelog.md
-<<<<<<< HEAD
           sed -E 's/\[([^]]+)\]\([^)]+\)/\1/g' /tmp/changelog.md > /tmp/changelog_curse.txt
           echo "Changelog (MD):"
           cat /tmp/changelog.md
           echo "Changelog (plain):"
           cat /tmp/changelog_curse.txt
-=======
-          echo "Changelog:"
-          cat /tmp/changelog.md
->>>>>>> 7b32efc345b0cecb8044f2ee483a810acfb51e38
 
       - name: Build
         if: steps.version.outputs.skip == 'false'
@@ -116,10 +105,6 @@ jobs:
         with:
           modrinth-id: ${{ vars.MODRINTH_PROJECT_ID }}
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-<<<<<<< HEAD
-=======
-          modrinth-environment: client
->>>>>>> 7b32efc345b0cecb8044f2ee483a810acfb51e38
           curseforge-id: ${{ vars.CURSEFORGE_PROJECT_ID }}
           curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -129,13 +114,7 @@ jobs:
           game-versions: '${{ steps.meta.outputs.game_versions }}'
           java: 21
           changelog-file: /tmp/changelog.md
-<<<<<<< HEAD
           curseforge-changelog-file: /tmp/changelog_curse.txt
           dependencies: |
             fabric(required){modrinth:P7dR8mSH}{curseforge:306612}
             fabric-language-kotlin(required){modrinth:Ha28R6CL}{curseforge:308769}
-=======
-          dependencies: |
-            required(fabric-api)
-            required(fabric-language-kotlin)
->>>>>>> 7b32efc345b0cecb8044f2ee483a810acfb51e38
