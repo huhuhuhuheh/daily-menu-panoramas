@@ -1,0 +1,72 @@
+name: Auto Merge New Version
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  handle:
+    if: startsWith(github.event.pull_request.title, 'New Version:')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Check author
+        id: author
+        run: |
+          if [ "${{ github.event.pull_request.user.login }}" != "huhuhuhuheh" ]; then
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Close PR from non-owner
+        if: steps.author.outputs.ok == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR=${{ github.event.pull_request.number }}
+          gh pr comment $PR --body "Amazingly, you are not the owner of this repo!"
+          gh pr close $PR
+          gh pr lock $PR
+
+      - name: Verify version bump
+        if: steps.author.outputs.ok == 'true'
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.sha }}
+          BASE_VER=$(git show ${{ github.event.pull_request.base.sha }}:gradle.properties | grep '^mod_version=' | cut -d= -f2)
+          HEAD_VER=$(grep '^mod_version=' gradle.properties | cut -d= -f2)
+          if [ "$BASE_VER" = "$HEAD_VER" ]; then
+            echo "Version not bumped. Aborting."
+            exit 1
+          fi
+
+      - name: Check PR body for publish metadata
+        if: steps.author.outputs.ok == 'true'
+        id: meta
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR=${{ github.event.pull_request.number }}
+          BODY=$(gh pr view $PR --json body --jq '.body // ""')
+          if echo "$BODY" | grep -q '^mcver='; then
+            echo "has=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Auto-merge simple version bump
+        if: steps.author.outputs.ok == 'true' && steps.meta.outputs.has == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR=${{ github.event.pull_request.number }}
+          gh pr review $PR --approve
+          gh pr merge $PR --auto --squash
