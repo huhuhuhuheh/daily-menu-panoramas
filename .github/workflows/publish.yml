@@ -1,0 +1,120 @@
+name: Publish
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'gradle.properties'
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  publish:
+    if: github.actor == 'huhuhuhuheh'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(grep '^mod_version=' gradle.properties | cut -d= -f2)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          MC_VERSION=$(grep '^minecraft_version=' gradle.properties | cut -d= -f2)
+          echo "mc_version=$MC_VERSION" >> "$GITHUB_OUTPUT"
+          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            echo "Tag v$VERSION already exists. Skipping publish."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Parse publish metadata from merged PR
+        id: meta
+        if: steps.version.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          HEAD_SHA=$(git rev-parse HEAD)
+          PR_NUMBER=$(gh pr list --state merged --json number,mergeCommit --jq '.[] | select(.mergeCommit.oid == "'$HEAD_SHA'") | .number')
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+          MCVER=""
+          if [ -n "$PR_NUMBER" ]; then
+            PR_BODY=$(gh pr view "$PR_NUMBER" --json body --jq '.body // ""')
+            MCVER=$(echo "$PR_BODY" | grep '^mcver=' | head -1 | cut -d= -f2)
+          fi
+
+          if [ -n "$MCVER" ]; then
+            echo "Using MC version from PR body: $MCVER"
+            if echo "$MCVER" | grep -q ','; then
+              echo "game_versions<<EOF" >> "$GITHUB_OUTPUT"
+              echo "$MCVER" | tr ',' '\n' >> "$GITHUB_OUTPUT"
+              echo "EOF" >> "$GITHUB_OUTPUT"
+            elif echo "$MCVER" | grep -q '-'; then
+              START=$(echo "$MCVER" | cut -d- -f1)
+              END=$(echo "$MCVER" | cut -d- -f2-)
+              echo "game_versions=[$START,$END]" >> "$GITHUB_OUTPUT"
+            else
+              echo "game_versions=$MCVER" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            FALLBACK=${{ steps.version.outputs.mc_version }}
+            echo "No metadata found, using gradle.properties: $FALLBACK"
+            echo "game_versions=$FALLBACK" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up JDK 21
+        if: steps.version.outputs.skip == 'false'
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: temurin
+
+      - name: Generate changelog
+        if: steps.version.outputs.skip == 'false'
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$PREV_TAG" ]; then
+            RANGE="HEAD"
+          else
+            RANGE="$PREV_TAG..HEAD"
+          fi
+          git log $RANGE --pretty=format:"- %s ([%h](${{ github.server_url }}/${{ github.repository }}/commit/%H))" --reverse > /tmp/changelog.md
+          sed -E 's/\[([^]]+)\]\([^)]+\)/\1/g' /tmp/changelog.md > /tmp/changelog_curse.txt
+          echo "Changelog (MD):"
+          cat /tmp/changelog.md
+          echo "Changelog (plain):"
+          cat /tmp/changelog_curse.txt
+
+      - name: Build
+        if: steps.version.outputs.skip == 'false'
+        shell: bash
+        run: |
+          set -o pipefail
+          chmod +x gradlew
+          ./gradlew build 2>&1
+
+      - name: Publish to Modrinth, CurseForge, GitHub Releases
+        if: steps.version.outputs.skip == 'false'
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          modrinth-id: ${{ vars.MODRINTH_PROJECT_ID }}
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          curseforge-id: ${{ vars.CURSEFORGE_PROJECT_ID }}
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          name: Daily Menu Panoramas v${{ steps.version.outputs.version }}
+          version: v${{ steps.version.outputs.version }}
+          loaders: fabric
+          game-versions: '${{ steps.meta.outputs.game_versions }}'
+          java: 21
+          changelog-file: /tmp/changelog.md
+          curseforge-changelog-file: /tmp/changelog_curse.txt
+          dependencies: |
+            fabric(required){modrinth:P7dR8mSH}{curseforge:306612}
+            fabric-language-kotlin(required){modrinth:Ha28R6CL}{curseforge:308769}
