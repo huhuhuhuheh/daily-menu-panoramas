@@ -48,7 +48,11 @@ jobs:
 
           if [ -n "$MCVER" ]; then
             echo "Using MC version from PR body: $MCVER"
-            if echo "$MCVER" | grep -q '-'; then
+            if echo "$MCVER" | grep -q ','; then
+              echo "game_versions<<EOF" >> "$GITHUB_OUTPUT"
+              echo "$MCVER" | tr ',' '\n' >> "$GITHUB_OUTPUT"
+              echo "EOF" >> "$GITHUB_OUTPUT"
+            elif echo "$MCVER" | grep -q '-'; then
               START=$(echo "$MCVER" | cut -d- -f1)
               END=$(echo "$MCVER" | cut -d- -f2-)
               echo "game_versions=[$START,$END]" >> "$GITHUB_OUTPUT"
