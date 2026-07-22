@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'gradle.properties'
+      - 'ver.txt'
 
 permissions:
   contents: write
@@ -63,9 +64,9 @@ jobs:
               echo "game_versions=$MCVER" >> "$GITHUB_OUTPUT"
             fi
           else
-            FALLBACK=${{ steps.version.outputs.mc_version }}
-            echo "No metadata found, using gradle.properties: $FALLBACK"
-            echo "game_versions=$FALLBACK" >> "$GITHUB_OUTPUT"
+            MCVER_RANGE=$(cat ver.txt 2>/dev/null | tr -d '[:space:]')
+            echo "No metadata found, using ver.txt: $MCVER_RANGE"
+            echo "game_versions=$MCVER_RANGE" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Set up JDK 21
@@ -118,3 +119,15 @@ jobs:
           dependencies: |
             fabric(required){modrinth:P7dR8mSH}{curseforge:306612}
             fabric-language-kotlin(required){modrinth:Ha28R6CL}{curseforge:308769}
+
+      - name: Publish to git.gay
+        if: steps.version.outputs.skip == 'false'
+        uses: actions/forgejo-release@v2
+        with:
+          url: https://git.gay
+          repo: huhuhuhuheh/daily-menu-panoramas
+          token: ${{ secrets.GITGAY_TOKEN }}
+          tag: v${{ steps.version.outputs.version }}
+          title: Daily Menu Panoramas v${{ steps.version.outputs.version }}
+          release-dir: build/libs
+          release-notes-file: /tmp/changelog.md

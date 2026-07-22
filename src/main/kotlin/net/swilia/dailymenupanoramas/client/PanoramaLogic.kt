@@ -11,7 +11,7 @@ import kotlin.jvm.JvmStatic
 
 object PanoramaLogic {
     private const val MOD_ID = "daily_menu_panoramas"
-    private const val NUM_NUMERIC_PANORAMAS = 26
+    private const val NUM_NUMERIC_PANORAMAS = 29
     private const val MAX_SCAN_INDEX = 1000
     private const val MAX_CONSECUTIVE_MISSES = 20
     private var cachedNumericIndices: List<Int>? = null
@@ -34,6 +34,8 @@ object PanoramaLogic {
         val now = LocalDate.now() // For testing dates, change LocalDate.now() to LocalDate.of() followed by its date
         val month = now.month
         val day = now.dayOfMonth
+
+        PanoramaConfig.load()
 
         LOGGER.info("Panorama request → global=$global hemisphereSouth=$southernHemisphere period=$period")
 
@@ -64,7 +66,8 @@ object PanoramaLogic {
             val season = monthToSeason(month, southernHemisphere)
             LOGGER.info("Season (local) resolved → $season")
             if (season == "numeric") {
-                val id = safeGetNumericPanoramaIdForPeriod(Period.RANDOM)
+                val numericPeriod = if (PanoramaConfig.shouldBeRandomInsteadOfOneAtAday) Period.RANDOM else Period.DAILY
+                val id = safeGetNumericPanoramaIdForPeriod(numericPeriod)
                 LOGGER.info("Numeric panorama resolved → $id")
                 val client = MinecraftClient.getInstance()
                 if (client != null) {
@@ -85,7 +88,8 @@ object PanoramaLogic {
             val season = monthToSeason(month, false)
             LOGGER.info("Season (global) resolved → $season")
             if (season == "numeric") {
-                val id = safeGetNumericPanoramaIdForPeriod(Period.RANDOM)
+                val numericPeriod = if (PanoramaConfig.shouldBeRandomInsteadOfOneAtAday) Period.RANDOM else Period.DAILY
+                val id = safeGetNumericPanoramaIdForPeriod(numericPeriod)
                 LOGGER.info("Numeric panorama resolved → $id")
                 val client = MinecraftClient.getInstance()
                 if (client != null) {
