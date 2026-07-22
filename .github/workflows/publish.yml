@@ -6,6 +6,8 @@ on:
     paths:
       - 'gradle.properties'
       - 'ver.txt'
+    tags:
+      - 'v*'
 
 permissions:
   contents: write
