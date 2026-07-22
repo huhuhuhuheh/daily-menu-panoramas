@@ -68,7 +68,17 @@ jobs:
           else
             MCVER_RANGE=$(cat ver.txt 2>/dev/null | tr -d '[:space:]')
             echo "No metadata found, using ver.txt: $MCVER_RANGE"
-            echo "game_versions=$MCVER_RANGE" >> "$GITHUB_OUTPUT"
+            if echo "$MCVER_RANGE" | grep -q ','; then
+              echo "game_versions<<EOF" >> "$GITHUB_OUTPUT"
+              echo "$MCVER_RANGE" | tr ',' '\n' >> "$GITHUB_OUTPUT"
+              echo "EOF" >> "$GITHUB_OUTPUT"
+            elif echo "$MCVER_RANGE" | grep -q '-'; then
+              START=$(echo "$MCVER_RANGE" | cut -d- -f1)
+              END=$(echo "$MCVER_RANGE" | cut -d- -f2-)
+              echo "game_versions=[$START,$END]" >> "$GITHUB_OUTPUT"
+            else
+              echo "game_versions=$MCVER_RANGE" >> "$GITHUB_OUTPUT"
+            fi
           fi
 
       - name: Set up JDK 21
@@ -83,7 +93,7 @@ jobs:
         run: |
           PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
           if [ -z "$PREV_TAG" ]; then
-            RANGE="HEAD"
+            RANGE="--all"
           else
             RANGE="$PREV_TAG..HEAD"
           fi
