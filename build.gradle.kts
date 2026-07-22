@@ -27,7 +27,17 @@ java {
 
 repositories {
     maven { url = uri("https://maven.isxander.dev/releases") }
-    maven { url = uri("https://maven.terraformersmc.com/") }
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "Modrinth"
+                url = uri("https://api.modrinth.com/maven")
+            }
+        }
+        filter {
+            includeGroup("maven.modrinth")
+        }
+    }
 }
 
 dependencies {
@@ -39,7 +49,7 @@ dependencies {
 
     modImplementation("net.fabricmc.fabric-api:fabric-api:${project.property("fabric_version")}")
     modImplementation("dev.isxander:yet-another-config-lib:${project.property("yacl_version")}")
-    modImplementation("com.terraformersmc:modmenu:${project.property("modmenu_version")}")
+    modImplementation("maven.modrinth:mOgUt4GM:${project.property("modmenu_version")}")
 }
 
 tasks.processResources {
