@@ -122,12 +122,12 @@ jobs:
 
       - name: Publish to git.gay
         if: steps.version.outputs.skip == 'false'
-        uses: actions/forgejo-release@v2
+        uses: akkuman/gitea-release-action@v1
         with:
-          url: https://git.gay
-          repo: huhuhuhuheh/daily-menu-panoramas
+          server_url: https://git.gay
+          repository: huhuhuhuheh/daily-menu-panoramas
           token: ${{ secrets.GITGAY_TOKEN }}
-          tag: v${{ steps.version.outputs.version }}
-          title: Daily Menu Panoramas v${{ steps.version.outputs.version }}
-          release-dir: build/libs
-          release-notes-file: /tmp/changelog.md
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Daily Menu Panoramas v${{ steps.version.outputs.version }}
+          body_path: /tmp/changelog.md
+          files: build/libs/*
