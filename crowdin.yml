@@ -5,3 +5,4 @@ files:
     languages_mapping:
       locale_with_underscore:
         es-ES: es_es
+escape_quotes: 0
