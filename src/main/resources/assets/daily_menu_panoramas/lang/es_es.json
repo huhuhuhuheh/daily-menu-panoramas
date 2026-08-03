@@ -1,0 +1,14 @@
+{
+  "text.daily_menu_panoramas.contrib.title": "¿Quieres ayudar en el mod?",
+  "text.daily_menu_panoramas.contrib.text_p1": "Si ves esta pantalla ahora, ¡teniste suerte! Se ejecutó esta pantalla\n\nQuitando los chistes, para el contexto, hice esté mod por meses porque quería ver si es que \"podía\" cambiar el panorama diariamente en vez de las de Mojang, cuando intente, falle y elimine el projecto y no volví para ir y corregirlo\n\nDe igual manera, las panoramas fueron creados POR una persona de un mundo al azar (o servidor) que queria hacer la captura, no puedo hacer esto solo y crear 50 panoramas todas en uno, y si no te importa, ¿podias contribuir al projecto?\n\n(Todo el codigo es de código abierto)\n\n¡Si, realmente! Puedes contribuir a nuevos panoramas, or hacer traduciones si es que tu quieres\n\nSi es asi, then haz click then \"Ver Fuente\"",
+  "text.daily_menu_panoramas.contrib.text_p2": "Eres también libre de donarme (en caso no quieres contribuir), no suelo recibir donaciones ni preguntar por algo como \"<insertar dinero aqui> puede ayudar\", coso, puedes donar si es que tu quieres\n\nPor cierto puedes deshabilitar ver esta pantalla abajo antes que vayas a hacer tu cosa, pero no me veras de nuevo si lo haces <3",
+  "text.daily_menu_panoramas.contrib.source": "Ver Fuente",
+  "text.daily_menu_panoramas.contrib.next": "Siguiente >",
+  "text.daily_menu_panoramas.contrib.kofi": "Ko-Fi",
+  "text.daily_menu_panoramas.contrib.paypal": "PayPal",
+  "text.daily_menu_panoramas.contrib.continue": "Continuar al juego",
+  "text.daily_menu_panoramas.contrib.dont_show": "No mostrar esto de nuevo",
+  "modmenu.nameTranslation.daily_menu_panoramas": "Daily Menu Panoramas",
+  "modmenu.descriptionTranslation.daily_menu_panoramas": "¿Aburrido de los Panoramas de Mojang? Si, a mí también",
+  "modmenu.summaryTranslation.daily_menu_panoramas": "¡Más Panoramas!"
+}
