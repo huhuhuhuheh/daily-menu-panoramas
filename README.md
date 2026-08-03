@@ -6,6 +6,7 @@
 ![Issues](https://img.shields.io/github/issues/huhuhuhuheh/daily-menu-panoramas?style=flat&color=orange)
 [![Supported Minecraft](https://img.shields.io/badge/Minecraft-1.21.5_--_1.21.11-purple?style=flat)](https://modrinth.com/project/bsrPC26E)
 ![Trans Rights!!!!!!!!!!!](https://pride-badges.pony.workers.dev/static/v1?label=trans%20rights&stripeWidth=6&stripeColors=5BCEFA,F5A9B8,FFFFFF,F5A9B8,5BCEFA)
+[![Crowdin](https://badges.crowdin.net/daily-menu-panoramas/localized.svg)](https://crowdin.com/project/daily-menu-panoramas)
 
 Source for the mod that changes your panorama daily, or by season or event!
 
