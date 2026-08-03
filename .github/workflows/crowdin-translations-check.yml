@@ -19,6 +19,9 @@ jobs:
     name: Check 1 (JSON Valid)
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' || (github.event.head_commit != null && github.event.head_commit.committer.username == 'crowdin-bot')
+    outputs:
+      pr: ${{ steps.inprogress.outputs.pr }}
+      cid: ${{ steps.inprogress.outputs.cid }}
     env:
       GH_TOKEN: ${{ github.token }}
       LANG_DIR: src/main/resources/assets/daily_menu_panoramas/lang
@@ -28,18 +31,20 @@ jobs:
         run: |
           set -euo pipefail
           REPO="${{ github.repository }}"
-          MARKER='**Check 1 (JSON Valid)**'
+          BODY="Crowdin valid syntax, which uhh validates the syntax
+
+          **Check 1 (JSON Valid):** In Progress...
+
+          **Check 2 (Translation compiling):** In Progress..."
           PR=$(gh pr list --repo "$REPO" --head l10n_crowdin --json number --jq '.[0].number' || true)
           if [ -z "$PR" ] || [ "$PR" = "null" ]; then
             echo "::warning::No PR found for l10n_crowdin, skipping comment"
             exit 0
           fi
           echo "pr=$PR" >> "$GITHUB_OUTPUT"
-          CID=$(gh api "repos/$REPO/issues/$PR/comments" --jq '.[] | select(.body | contains("**Check 1 (JSON Valid)**")) | .id' | head -1)
-          jq -n --arg body "$MARKER: In Progress..." '{body: $body}' > /tmp/payload.json
-          if [ -n "$CID" ]; then
-            gh api -X PATCH "repos/$REPO/issues/comments/$CID" --input /tmp/payload.json >/dev/null
-          else
+          CID=$(gh api "repos/$REPO/issues/$PR/comments" --jq '.[] | select(.body | startswith("Crowdin valid syntax")) | .id' | head -1)
+          if [ -z "$CID" ] || [ "$CID" = "null" ]; then
+            jq -n --arg body "$BODY" '{body: $body}' > /tmp/payload.json
             CID=$(gh api -X POST "repos/$REPO/issues/$PR/comments" --input /tmp/payload.json --jq '.id')
           fi
           echo "cid=$CID" >> "$GITHUB_OUTPUT"
@@ -57,15 +62,25 @@ jobs:
       - name: Validate translations and update comment
         id: validate
         env:
-          PR: ${{ steps.inprogress.outputs.pr }}
           CID: ${{ steps.inprogress.outputs.cid }}
         run: |
           set -uo pipefail
           REPO="${{ github.repository }}"
-          MARKER='**Check 1 (JSON Valid)**'
+          MARKER='**Check 1 (JSON Valid):**'
+          cat > /tmp/update_check.py <<'PYEOF'
+          import re, sys
+          new_section = sys.argv[1]
+          path = sys.argv[2]
+          with open(path, encoding='utf-8') as f:
+              body = f.read()
+          marker = "**Check 2 (Translation compiling):**"
+          head, sep, tail = body.partition(marker)
+          head = re.sub(r"\*\*Check 1 \(JSON Valid\):\*\*.*$", new_section, head, flags=re.S)
+          with open(path, 'w', encoding='utf-8') as f:
+              f.write(head + sep + tail)
+          PYEOF
           INVALID=0
           REPORT=""
-          BODY="$MARKER: JSON is valid"
           for f in "$LANG_DIR"/*.json; do
             if ! ./jsonfmt -f "$f" >/dev/null 2>&1; then
               INVALID=1
@@ -80,12 +95,16 @@ jobs:
             fi
           done
           if [ "$INVALID" -eq 1 ]; then
-            BODY="$MARKER: JSON is invalid
+            CHECK1="$MARKER: JSON is invalid
             $REPORT
             An editor has to manually push a change, either to [Crowdin](https://crowdin.com/editor/daily-menu-panoramas/16) or to [the branch](https://github.com/huhuhuhuheh/daily-menu-panoramas/tree/l10n_crowdin)"
+          else
+            CHECK1="$MARKER: JSON is valid"
           fi
           if [ -n "${CID:-}" ]; then
-            jq -n --arg body "$BODY" '{body: $body}' > /tmp/payload.json
+            gh api "repos/$REPO/issues/comments/$CID" --jq '.body' > /tmp/current.md
+            python3 /tmp/update_check.py "$CHECK1" /tmp/current.md
+            jq -n --rawfile body /tmp/current.md '{body: $body}' > /tmp/payload.json
             gh api -X PATCH "repos/$REPO/issues/comments/$CID" --input /tmp/payload.json >/dev/null
           fi
           if [ "$INVALID" -eq 1 ]; then
@@ -100,36 +119,17 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: rm -f jsonfmt /tmp/payload.json || true
+        run: rm -f jsonfmt /tmp/payload.json /tmp/current.md /tmp/update_check.py || true
 
   build-check:
     name: Check 2 (Translation compiling)
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || (github.event.head_commit != null && github.event.head_commit.committer.username == 'crowdin-bot')
+    needs: json-check
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || (github.event.head_commit != null && github.event.head_commit.committer.username == 'crowdin-bot')) }}
     env:
       GH_TOKEN: ${{ github.token }}
+      CID: ${{ needs.json-check.outputs.cid }}
     steps:
-      - name: Post In Progress comment
-        id: inprogress
-        run: |
-          set -euo pipefail
-          REPO="${{ github.repository }}"
-          MARKER='**Check 2 (Translation compiling)**'
-          PR=$(gh pr list --repo "$REPO" --head l10n_crowdin --json number --jq '.[0].number' || true)
-          if [ -z "$PR" ] || [ "$PR" = "null" ]; then
-            echo "::warning::No PR found for l10n_crowdin, skipping comment"
-            exit 0
-          fi
-          echo "pr=$PR" >> "$GITHUB_OUTPUT"
-          CID=$(gh api "repos/$REPO/issues/$PR/comments" --jq '.[] | select(.body | contains("**Check 2 (Translation compiling)**")) | .id' | head -1)
-          jq -n --arg body "$MARKER: In Progress..." '{body: $body}' > /tmp/payload.json
-          if [ -n "$CID" ]; then
-            gh api -X PATCH "repos/$REPO/issues/comments/$CID" --input /tmp/payload.json >/dev/null
-          else
-            CID=$(gh api -X POST "repos/$REPO/issues/$PR/comments" --input /tmp/payload.json --jq '.id')
-          fi
-          echo "cid=$CID" >> "$GITHUB_OUTPUT"
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -144,33 +144,44 @@ jobs:
 
       - name: Build and update comment
         id: build
-        env:
-          PR: ${{ steps.inprogress.outputs.pr }}
-          CID: ${{ steps.inprogress.outputs.cid }}
         run: |
           set -uo pipefail
           REPO="${{ github.repository }}"
-          MARKER='**Check 2 (Translation compiling)**'
+          MARKER='**Check 2 (Translation compiling):**'
+          cat > /tmp/update_check2.py <<'PYEOF'
+          import re, sys
+          new_section = sys.argv[1]
+          path = sys.argv[2]
+          with open(path, encoding='utf-8') as f:
+              body = f.read()
+          body = re.sub(r"\*\*Check 2 \(Translation compiling\):\*\*.*$", new_section, body, flags=re.S)
+          with open(path, 'w', encoding='utf-8') as f:
+              f.write(body)
+          PYEOF
           chmod +x gradlew
           ./gradlew build --no-daemon > /tmp/build.log 2>&1
           BUILD_OK=$?
           if [ "$BUILD_OK" -eq 0 ]; then
-            BODY="$MARKER: Compiles"
+            CHECK2="$MARKER: Compiles"
           else
             TAIL=$(tail -n 15 /tmp/build.log || true)
-            BODY="$MARKER: Failed
+            CHECK2="$MARKER: Failed
 
-            <details>
-            <summary>Build log (last lines)</summary>
+          <details>
+          <summary>Build log (last lines)</summary>
 
-            \`\`\`
-            $TAIL
-            \`\`\`
-            </details>"
+          \`\`\`
+          $TAIL
+          \`\`\`
+          </details>"
           fi
           if [ -n "${CID:-}" ]; then
-            jq -n --arg body "$BODY" '{body: $body}' > /tmp/payload.json
+            gh api "repos/$REPO/issues/comments/$CID" --jq '.body' > /tmp/current.md
+            python3 /tmp/update_check2.py "$CHECK2" /tmp/current.md
+            jq -n --rawfile body /tmp/current.md '{body: $body}' > /tmp/payload.json
             gh api -X PATCH "repos/$REPO/issues/comments/$CID" --input /tmp/payload.json >/dev/null
+          else
+            echo "::warning::No comment id from json-check, skipping comment update"
           fi
           if [ "$BUILD_OK" -eq 0 ]; then
             echo "build_ok=yes" >> "$GITHUB_OUTPUT"
@@ -186,4 +197,4 @@ jobs:
         if: always()
         run: |
           ./gradlew --stop >/dev/null 2>&1 || true
-          rm -f /tmp/build.log /tmp/payload.json || true
+          rm -f /tmp/build.log /tmp/payload.json /tmp/current.md /tmp/update_check2.py || true
