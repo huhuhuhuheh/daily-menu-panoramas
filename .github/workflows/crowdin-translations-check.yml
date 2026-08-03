@@ -1,0 +1,189 @@
+name: Crowdin Translations Check
+
+on:
+  push:
+    branches:
+      - l10n_crowdin
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: crowdin-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  json-check:
+    name: Check 1 (JSON Valid)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || (github.event.head_commit != null && github.event.head_commit.committer.username == 'crowdin-bot')
+    env:
+      GH_TOKEN: ${{ github.token }}
+      LANG_DIR: src/main/resources/assets/daily_menu_panoramas/lang
+    steps:
+      - name: Post In Progress comment
+        id: inprogress
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          MARKER='**Check 1 (JSON Valid)**'
+          PR=$(gh pr list --repo "$REPO" --head l10n_crowdin --json number --jq '.[0].number' || true)
+          if [ -z "$PR" ] || [ "$PR" = "null" ]; then
+            echo "::warning::No PR found for l10n_crowdin, skipping comment"
+            exit 0
+          fi
+          echo "pr=$PR" >> "$GITHUB_OUTPUT"
+          CID=$(gh api "repos/$REPO/issues/$PR/comments" --jq '.[] | select(.body | contains("**Check 1 (JSON Valid)**")) | .id' | head -1)
+          jq -n --arg body "$MARKER: In Progress..." '{body: $body}' > /tmp/payload.json
+          if [ -n "$CID" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$CID" --input /tmp/payload.json >/dev/null
+          else
+            CID=$(gh api -X POST "repos/$REPO/issues/$PR/comments" --input /tmp/payload.json --jq '.id')
+          fi
+          echo "cid=$CID" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: l10n_crowdin
+
+      - name: Download jsonfmt
+        run: |
+          curl -fsSL -o jsonfmt https://raw.githubusercontent.com/mrvi0/cli-json-formatter/main/jsonfmt
+          chmod +x jsonfmt
+
+      - name: Validate translations and update comment
+        id: validate
+        env:
+          PR: ${{ steps.inprogress.outputs.pr }}
+          CID: ${{ steps.inprogress.outputs.cid }}
+        run: |
+          set -uo pipefail
+          REPO="${{ github.repository }}"
+          MARKER='**Check 1 (JSON Valid)**'
+          INVALID=0
+          REPORT=""
+          BODY="$MARKER: JSON is valid"
+          for f in "$LANG_DIR"/*.json; do
+            if ! ./jsonfmt -f "$f" >/dev/null 2>&1; then
+              INVALID=1
+              ERR=$(jq . "$f" 2>&1 | head -1)
+              REPORT+="
+            The file(s) \`$f\` seem to be invalid by the program:
+
+            \`\`\`
+            $ERR
+            \`\`\`
+            "
+            fi
+          done
+          if [ "$INVALID" -eq 1 ]; then
+            BODY="$MARKER: JSON is invalid
+            $REPORT
+            An editor has to manually push a change, either to [Crowdin](https://crowdin.com/editor/daily-menu-panoramas/16) or to [the branch](https://github.com/huhuhuhuheh/daily-menu-panoramas/tree/l10n_crowdin)"
+          fi
+          if [ -n "${CID:-}" ]; then
+            jq -n --arg body "$BODY" '{body: $body}' > /tmp/payload.json
+            gh api -X PATCH "repos/$REPO/issues/comments/$CID" --input /tmp/payload.json >/dev/null
+          fi
+          if [ "$INVALID" -eq 1 ]; then
+            echo "json_valid=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "json_valid=yes" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fail run if JSON is invalid
+        if: steps.validate.outputs.json_valid == 'no'
+        run: exit 1
+
+      - name: Cleanup
+        if: always()
+        run: rm -f jsonfmt /tmp/payload.json || true
+
+  build-check:
+    name: Check 2 (Translation compiling)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || (github.event.head_commit != null && github.event.head_commit.committer.username == 'crowdin-bot')
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Post In Progress comment
+        id: inprogress
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          MARKER='**Check 2 (Translation compiling)**'
+          PR=$(gh pr list --repo "$REPO" --head l10n_crowdin --json number --jq '.[0].number' || true)
+          if [ -z "$PR" ] || [ "$PR" = "null" ]; then
+            echo "::warning::No PR found for l10n_crowdin, skipping comment"
+            exit 0
+          fi
+          echo "pr=$PR" >> "$GITHUB_OUTPUT"
+          CID=$(gh api "repos/$REPO/issues/$PR/comments" --jq '.[] | select(.body | contains("**Check 2 (Translation compiling)**")) | .id' | head -1)
+          jq -n --arg body "$MARKER: In Progress..." '{body: $body}' > /tmp/payload.json
+          if [ -n "$CID" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$CID" --input /tmp/payload.json >/dev/null
+          else
+            CID=$(gh api -X POST "repos/$REPO/issues/$PR/comments" --input /tmp/payload.json --jq '.id')
+          fi
+          echo "cid=$CID" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: l10n_crowdin
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Build and update comment
+        id: build
+        env:
+          PR: ${{ steps.inprogress.outputs.pr }}
+          CID: ${{ steps.inprogress.outputs.cid }}
+        run: |
+          set -uo pipefail
+          REPO="${{ github.repository }}"
+          MARKER='**Check 2 (Translation compiling)**'
+          chmod +x gradlew
+          ./gradlew build --no-daemon > /tmp/build.log 2>&1
+          BUILD_OK=$?
+          if [ "$BUILD_OK" -eq 0 ]; then
+            BODY="$MARKER: Compiles"
+          else
+            TAIL=$(tail -n 15 /tmp/build.log || true)
+            BODY="$MARKER: Failed
+
+            <details>
+            <summary>Build log (last lines)</summary>
+
+            \`\`\`
+            $TAIL
+            \`\`\`
+            </details>"
+          fi
+          if [ -n "${CID:-}" ]; then
+            jq -n --arg body "$BODY" '{body: $body}' > /tmp/payload.json
+            gh api -X PATCH "repos/$REPO/issues/comments/$CID" --input /tmp/payload.json >/dev/null
+          fi
+          if [ "$BUILD_OK" -eq 0 ]; then
+            echo "build_ok=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "build_ok=no" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fail run if build failed
+        if: steps.build.outputs.build_ok == 'no'
+        run: exit 1
+
+      - name: Cleanup
+        if: always()
+        run: |
+          ./gradlew --stop >/dev/null 2>&1 || true
+          rm -f /tmp/build.log /tmp/payload.json || true
