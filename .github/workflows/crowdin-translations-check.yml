@@ -33,9 +33,9 @@ jobs:
           REPO="${{ github.repository }}"
           BODY="Crowdin valid syntax, which uhh validates the syntax
 
-          **Check 1 (JSON Valid):** In Progress...
+          **Check 1 (JSON Valid)**: In Progress...
 
-          **Check 2 (Translation compiling):** In Progress..."
+          **Check 2 (Translation compiling)**: In Progress..."
           PR=$(gh pr list --repo "$REPO" --head l10n_crowdin --json number --jq '.[0].number' || true)
           if [ -z "$PR" ] || [ "$PR" = "null" ]; then
             echo "::warning::No PR found for l10n_crowdin, skipping comment"
@@ -66,18 +66,18 @@ jobs:
         run: |
           set -uo pipefail
           REPO="${{ github.repository }}"
-          MARKER='**Check 1 (JSON Valid):**'
+          MARKER='**Check 1 (JSON Valid)**'
           cat > /tmp/update_check.py <<'PYEOF'
-          import re, sys
+          import sys
           new_section = sys.argv[1]
           path = sys.argv[2]
           with open(path, encoding='utf-8') as f:
               body = f.read()
-          marker = "**Check 2 (Translation compiling):**"
+          marker = "**Check 2 (Translation compiling)**"
           head, sep, tail = body.partition(marker)
-          head = re.sub(r"\*\*Check 1 \(JSON Valid\):\*\*.*$", new_section, head, flags=re.S)
+          before, _, _ = head.partition("**Check 1 (JSON Valid)**")
           with open(path, 'w', encoding='utf-8') as f:
-              f.write(head + sep + tail)
+              f.write(before + new_section + "\n\n" + sep + tail)
           PYEOF
           INVALID=0
           REPORT=""
@@ -147,16 +147,17 @@ jobs:
         run: |
           set -uo pipefail
           REPO="${{ github.repository }}"
-          MARKER='**Check 2 (Translation compiling):**'
+          MARKER='**Check 2 (Translation compiling)**'
           cat > /tmp/update_check2.py <<'PYEOF'
-          import re, sys
+          import sys
           new_section = sys.argv[1]
           path = sys.argv[2]
           with open(path, encoding='utf-8') as f:
               body = f.read()
-          body = re.sub(r"\*\*Check 2 \(Translation compiling\):\*\*.*$", new_section, body, flags=re.S)
+          marker = "**Check 2 (Translation compiling)**"
+          before, _, _ = body.partition(marker)
           with open(path, 'w', encoding='utf-8') as f:
-              f.write(body)
+              f.write(before + new_section)
           PYEOF
           chmod +x gradlew
           ./gradlew build --no-daemon > /tmp/build.log 2>&1
