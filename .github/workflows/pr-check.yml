@@ -10,6 +10,7 @@ permissions:
 jobs:
   check-panorama:
     runs-on: ubuntu-latest
+    if: ${{ !(github.event.pull_request.head.ref == 'l10n_crowdin' && github.event.pull_request.user.login == 'crowdin-bot') }}
     container:
       image: cimg/openjdk:21.0
     steps:
