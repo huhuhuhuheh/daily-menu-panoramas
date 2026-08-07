@@ -1,0 +1,14 @@
+{
+  "text.daily_menu_panoramas.contrib.title": "Möchtest du diesem Mod helfen?",
+  "text.daily_menu_panoramas.contrib.text_p1": "Falls du diesen Bildschirm gerade siehst, hast du Glück! Das bedeutet nämlich, dass es geklappt hat!\n\nAber Spaß beiseite: Um den Kontext zu erklären, ich wollte diesen Mod schon seit Monaten erstellen, weil ich wissen wollte, ob ich den Panorama-Bildschirm „tatsächlich“ täglich ändern kann, anstatt die üblichen Mojang-Bilder zu verwenden. Als ich es versucht habe, ist es mir irgendwie nicht gelungen, also habe ich das Projekt gelöscht und mich damals geweigert, zurückzugehen und es zu reparieren.\n\nWie dem auch sei: Die Panoramen werden ALLE von einer einzigen Person erstellt, egal in welcher generierten Welt (oder auf welchem Server) die Aufnahme gemacht werden soll. Ich mache das alleine, daher kann ich nicht einfach über 50 Panoramen auf einmal hochladen. Wenn es dir nichts ausmacht, würdest du bitte zu diesem Projekt beitragen?\n\n(Das Ganze ist Open Source.)\n\nJa, wirklich! Du kannst neue Panoramen hinzufügen oder Übersetzungen anfertigen, wenn du Lust dazu hast.\n\nWenn ja, kannst du gerne auf „Quelle anzeigen“ klicken",
+  "text.daily_menu_panoramas.contrib.text_p2": "Du kannst mir auch gerne etwas spenden (falls du nichts beitragen möchtest), ich bekomme normalerweise keine Zahlungen und bitte auch nicht um irgendeinen minimalen Betrag wie „<Dollar-Betrag hier einfügen> könnte helfen“, so einen Quatsch. Du kannst spenden, was immer du willst, wenn du wirklich Lust dazu hast.\n\nÜbrigens kannst du diesen Bildschirm hier unten ausblenden, bevor du weitermachst, aber dann würde ich dich vielleicht vermissen <3",
+  "text.daily_menu_panoramas.contrib.source": "Quelle anzeigen",
+  "text.daily_menu_panoramas.contrib.next": "Weiter >",
+  "text.daily_menu_panoramas.contrib.kofi": "Ko-Fi",
+  "text.daily_menu_panoramas.contrib.paypal": "PayPal",
+  "text.daily_menu_panoramas.contrib.continue": "Weiter zum Spiel",
+  "text.daily_menu_panoramas.contrib.dont_show": "Nicht erneut anzeigen",
+  "modmenu.nameTranslation.daily_menu_panoramas": "Tägliche Menüpanoramen",
+  "modmenu.descriptionTranslation.daily_menu_panoramas": "Hast du die Mojang-Panoramen satt? Ja, ich auch",
+  "modmenu.summaryTranslation.daily_menu_panoramas": "Mehr Panoramen!"
+}
