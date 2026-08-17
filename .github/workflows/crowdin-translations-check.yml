@@ -55,17 +55,30 @@ jobs:
           fi
           echo "cid=$CID" >> "$GITHUB_OUTPUT"
 
+      - name: Check if l10n_crowdin branch exists
+        id: branch-check
+        run: |
+          if git ls-remote --heads origin l10n_crowdin | grep -q l10n_crowdin; then
+            echo "exists=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=no" >> "$GITHUB_OUTPUT"
+            echo "::warning::Branch l10n_crowdin does not exist yet, skipping translation checks"
+          fi
+
       - name: Checkout
+        if: steps.branch-check.outputs.exists == 'yes'
         uses: actions/checkout@v4
         with:
           ref: l10n_crowdin
 
       - name: Download jsonfmt
+        if: steps.branch-check.outputs.exists == 'yes'
         run: |
           curl -fsSL -o jsonfmt https://raw.githubusercontent.com/mrvi0/cli-json-formatter/main/jsonfmt
           chmod +x jsonfmt
 
       - name: Validate translations and update comment
+        if: steps.branch-check.outputs.exists == 'yes'
         id: validate
         env:
           CID: ${{ steps.inprogress.outputs.cid }}
@@ -120,7 +133,7 @@ jobs:
           fi
 
       - name: Fail run if JSON is invalid
-        if: steps.validate.outputs.json_valid == 'no'
+        if: steps.branch-check.outputs.exists == 'yes' && steps.validate.outputs.json_valid == 'no'
         run: exit 1
 
       - name: Cleanup
@@ -136,12 +149,24 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       CID: ${{ needs.json-check.outputs.cid }}
     steps:
+      - name: Check if l10n_crowdin branch exists
+        id: branch-check
+        run: |
+          if git ls-remote --heads origin l10n_crowdin | grep -q l10n_crowdin; then
+            echo "exists=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=no" >> "$GITHUB_OUTPUT"
+            echo "::warning::Branch l10n_crowdin does not exist yet, skipping build check"
+          fi
+
       - name: Checkout
+        if: steps.branch-check.outputs.exists == 'yes'
         uses: actions/checkout@v4
         with:
           ref: l10n_crowdin
 
       - name: Set up JDK 21
+        if: steps.branch-check.outputs.exists == 'yes'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -149,6 +174,7 @@ jobs:
           cache: gradle
 
       - name: Build and update comment
+        if: steps.branch-check.outputs.exists == 'yes'
         id: build
         run: |
           set -uo pipefail
@@ -197,7 +223,7 @@ jobs:
           fi
 
       - name: Fail run if build failed
-        if: steps.build.outputs.build_ok == 'no'
+        if: steps.branch-check.outputs.exists == 'yes' && steps.build.outputs.build_ok == 'no'
         run: exit 1
 
       - name: Cleanup
