@@ -93,7 +93,7 @@ jobs:
         run: |
           PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
           if [ -z "$PREV_TAG" ]; then
-            RANGE="--all"
+            RANGE="main"
           else
             RANGE="$PREV_TAG..HEAD"
           fi
