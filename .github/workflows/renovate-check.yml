@@ -1,0 +1,88 @@
+name: Renovate Check
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  renovate-check:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.user.login == 'renovate[bot]'
+    container:
+      image: cimg/openjdk:21.0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if gradle.properties changed
+        id: props
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+          CHANGED=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD || true)
+          if echo "$CHANGED" | grep -Eq "^(gradle\.properties|gradle/wrapper/gradle-wrapper\.properties)$"; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build
+        if: steps.props.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -o pipefail
+          chmod +x gradlew
+          ./gradlew build 2>&1 | tee /tmp/build_output.txt
+
+      - name: Post success comment
+        if: steps.props.outputs.changed == 'true' && success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUILD_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          cat << 'PYEOF' > /tmp/success_body.py
+          import json, os
+          url = os.environ.get("BUILD_URL", "")
+          body = (
+              "The test to this PR has been completed as success, You might need to merge this PR when needed.\n\n"
+              f"###### *This is an automated check run by [GitHub Actions]({url}).*"
+          )
+          with open("/tmp/success_body.json", "w") as f:
+              json.dump({"body": body}, f)
+          PYEOF
+          python3 /tmp/success_body.py
+          curl -s -o /dev/null -X POST \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/$PR_NUMBER/comments" \
+            -d @/tmp/success_body.json
+
+      - name: Post failure comment
+        if: steps.props.outputs.changed == 'true' && failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUILD_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          cat << 'PYEOF' > /tmp/fail_body.py
+          import json, os
+          url = os.environ.get("BUILD_URL", "")
+          log = open("/tmp/build_output.txt").read() if os.path.exists("/tmp/build_output.txt") else "Build output not available."
+          body = (
+              "The test to this PR has been completed as Failed, Failed, due to some errors coming below, you might want to check?\n\n"
+              "<details>\n<summary>Build output</summary>\n\n```\n" + log + "\n```\n</details>\n\n"
+              f"###### *This is an automated check run by [GitHub Actions]({url}).*"
+          )
+          with open("/tmp/fail_body.json", "w") as f:
+              json.dump({"body": body}, f)
+          PYEOF
+          python3 /tmp/fail_body.py
+          curl -s -o /dev/null -X POST \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/$PR_NUMBER/comments" \
+            -d @/tmp/fail_body.json
