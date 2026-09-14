@@ -19,7 +19,7 @@ jobs:
           fetch-depth: 0
 
       - name: Download translations from Crowdin
-        uses: crowdin/github-action@v2
+        uses: crowdin/github-action@v3
         with:
           upload_sources: false
           download_translations: true
