@@ -1,0 +1,25 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "rangeStrategy": "bump",
+  "labels": ["dependencies"],
+  "dependencyDashboard": true,
+  "timezone": "Europe/Berlin",
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"]
+  },
+  "osvVulnerabilityAlerts": true,
+  "packageRules": [
+    {
+      "matchDatasources": ["maven"],
+      "groupName": "maven dependencies"
+    },
+    {
+      "matchDatasources": ["github-actions"],
+      "groupName": "github actions"
+    }
+  ]
+}
