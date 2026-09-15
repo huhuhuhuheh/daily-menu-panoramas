@@ -38,12 +38,14 @@
     {
       "matchUpdateTypes": ["minor", "patch"],
       "matchManagers": ["gradle"],
-      "groupName": "gradle dependencies"
+      "groupName": "gradle dependencies",
+      "recreateWhen": "never"
     },
     {
       "matchUpdateTypes": ["minor", "patch"],
       "matchManagers": ["gradle-wrapper"],
-      "groupName": "gradle wrapper"
+      "groupName": "gradle wrapper",
+      "recreateWhen": "never"
     },
     {
       "matchDatasources": ["github-actions"],

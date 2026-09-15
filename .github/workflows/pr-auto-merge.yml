@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   handle:
-    if: startsWith(github.event.pull_request.title, 'New Version:')
+    if: startsWith(github.event.pull_request.title, 'New Version:') && github.event.pull_request.user.login != 'renovate[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
