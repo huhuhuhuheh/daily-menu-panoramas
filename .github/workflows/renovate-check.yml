@@ -73,7 +73,7 @@ jobs:
           url = os.environ.get("BUILD_URL", "")
           log = open("/tmp/build_output.txt").read() if os.path.exists("/tmp/build_output.txt") else "Build output not available."
           body = (
-              "The test to this PR has been completed as Failed, Failed, due to some errors coming below, you might want to check?\n\n"
+              "The test to this PR has been completed as Failed, due to some errors coming below, you might want to check?\n\n"
               "<details>\n<summary>Build output</summary>\n\n```\n" + log + "\n```\n</details>\n\n"
               f"###### *This is an automated check run by [GitHub Actions]({url}).*"
           )
