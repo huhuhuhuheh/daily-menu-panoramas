@@ -79,8 +79,11 @@ tasks.processResources {
 
 tasks.register<Copy>("buildAndCollect") {
     group = "build"
-    description = "Builds the mod jar and copies it to build/libs/<mod version>/"
-    from(loomx.modJar.flatMap { it.archiveFile })
+    description = "Builds the mod jar and sources jar and copies them to build/libs/<mod version>/"
+    from(
+        loomx.modJar.flatMap { it.archiveFile },
+        tasks.named<org.gradle.api.tasks.bundling.Jar>("sourcesJar").flatMap { it.archiveFile },
+    )
     into(rootProject.layout.buildDirectory.dir("libs/${sc.properties["mod.version"]}"))
 }
 
