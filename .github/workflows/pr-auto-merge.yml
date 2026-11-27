@@ -41,8 +41,8 @@ jobs:
         if: steps.author.outputs.ok == 'true'
         run: |
           git fetch origin ${{ github.event.pull_request.base.sha }}
-          BASE_VER=$(git show ${{ github.event.pull_request.base.sha }}:gradle.properties | grep '^mod_version=' | cut -d= -f2)
-          HEAD_VER=$(grep '^mod_version=' gradle.properties | cut -d= -f2)
+          BASE_VER=$(git show ${{ github.event.pull_request.base.sha }}:stonecutter.properties.toml | grep '^mod.version = ' | head -1 | sed -E 's/^mod.version = "([^"]+)".*/\1/')
+          HEAD_VER=$(grep '^mod.version = ' stonecutter.properties.toml | head -1 | sed -E 's/^mod.version = "([^"]+)".*/\1/')
           if [ "$BASE_VER" = "$HEAD_VER" ]; then
             echo "Version not bumped. Aborting."
             exit 1

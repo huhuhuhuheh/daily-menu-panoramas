@@ -14,82 +14,65 @@ permissions:
   pull-requests: read
 
 jobs:
-  publish:
-    if: github.actor == 'huhuhuhuheh'
+  prepare:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      matrix: ${{ steps.meta.outputs.matrix }}
+      skip: ${{ steps.skip.outputs.skip }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Extract version
-        id: version
+      - name: Extract version and build matrix
+        id: meta
         run: |
-          VERSION=$(grep '^mod.version = ' stonecutter.properties.toml | head -1 | sed -E 's/^mod.version = "([^"]+)".*/\1/')
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          MC_VERSION=$(grep -oE '^\["[^"]+"\]' stonecutter.properties.toml | tr -d '[]"' | paste -sd, -)
-          echo "mc_version=$MC_VERSION" >> "$GITHUB_OUTPUT"
-          if gh release view "v$VERSION" >/dev/null 2>&1; then
-            echo "Release v$VERSION already exists. Skipping publish."
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import tomllib
+
+          with open("stonecutter.properties.toml", "rb") as file:
+              data = tomllib.load(file)
+
+          version = data["mod"]["version"]
+          kotlin_loader = data["deps"]["kotlin_loader"]
+
+          include = []
+          for mc_version, props in data.items():
+              if not mc_version[0].isdigit():
+                  continue
+              deps = props["deps"]
+              major, minor = (int(part) for part in mc_version.split(".")[:2])
+              include.append({
+                  "mc_version": mc_version,
+                  "java": 25 if (major, minor) >= (26, 1) else 21,
+                  "fabric_api": deps["fabric_api"],
+                  "kotlin_loader": kotlin_loader,
+                  "modmenu": deps["modmenu"],
+                  "yacl": deps["yacl"],
+              })
+
+          print(f"version={version}")
+          print("matrix<<EOF")
+          print(json.dumps({"include": include}, separators=(",", ":")))
+          print("EOF")
+          PY
+
+      - name: Check release
+        id: skip
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "v${{ steps.meta.outputs.version }}" >/dev/null 2>&1; then
+            echo "Release v${{ steps.meta.outputs.version }} already exists. Skipping publish."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Parse publish metadata from merged PR
-        id: meta
-        if: steps.version.outputs.skip == 'false'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          HEAD_SHA=$(git rev-parse HEAD)
-          PR_NUMBER=$(gh pr list --state merged --json number,mergeCommit --jq '.[] | select(.mergeCommit.oid == "'$HEAD_SHA'") | .number')
-          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
-
-          MCVER=""
-          if [ -n "$PR_NUMBER" ]; then
-            PR_BODY=$(gh pr view "$PR_NUMBER" --json body --jq '.body // ""')
-            MCVER=$(echo "$PR_BODY" | grep '^mcver=' | head -1 | cut -d= -f2)
-          fi
-
-          if [ -n "$MCVER" ]; then
-            echo "Using MC version from PR body: $MCVER"
-            if echo "$MCVER" | grep -q ','; then
-              echo "game_versions<<EOF" >> "$GITHUB_OUTPUT"
-              echo "$MCVER" | tr ',' '\n' >> "$GITHUB_OUTPUT"
-              echo "EOF" >> "$GITHUB_OUTPUT"
-            elif echo "$MCVER" | grep -q '-'; then
-              START=$(echo "$MCVER" | cut -d- -f1)
-              END=$(echo "$MCVER" | cut -d- -f2-)
-              echo "game_versions=[$START,$END]" >> "$GITHUB_OUTPUT"
-            else
-              echo "game_versions=$MCVER" >> "$GITHUB_OUTPUT"
-            fi
-          else
-            MCVER_RANGE=$(grep -oE '^\["[^"]+"\]' stonecutter.properties.toml | tr -d '[]"' | paste -sd, -)
-            echo "No metadata found, using ver.txt: $MCVER_RANGE"
-            if echo "$MCVER_RANGE" | grep -q ','; then
-              echo "game_versions<<EOF" >> "$GITHUB_OUTPUT"
-              echo "$MCVER_RANGE" | tr ',' '\n' >> "$GITHUB_OUTPUT"
-              echo "EOF" >> "$GITHUB_OUTPUT"
-            elif echo "$MCVER_RANGE" | grep -q '-'; then
-              START=$(echo "$MCVER_RANGE" | cut -d- -f1)
-              END=$(echo "$MCVER_RANGE" | cut -d- -f2-)
-              echo "game_versions=[$START,$END]" >> "$GITHUB_OUTPUT"
-            else
-              echo "game_versions=$MCVER_RANGE" >> "$GITHUB_OUTPUT"
-            fi
-          fi
-
-      - name: Set up JDK 25
-        if: steps.version.outputs.skip == 'false'
-        uses: actions/setup-java@v4
-        with:
-          java-version: 25
-          distribution: temurin
-
       - name: Generate changelog
-        if: steps.version.outputs.skip == 'false'
+        if: steps.skip.outputs.skip == 'false'
         run: |
           PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
           if [ -z "$PREV_TAG" ]; then
@@ -104,42 +87,139 @@ jobs:
           echo "Changelog (plain):"
           cat /tmp/changelog_curse.txt
 
+      - name: Upload changelog
+        if: steps.skip.outputs.skip == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog
+          path: |
+            /tmp/changelog.md
+            /tmp/changelog_curse.txt
+
+  build:
+    needs: prepare
+    if: needs.prepare.outputs.skip == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: 25
+          distribution: temurin
+
       - name: Build
-        if: steps.version.outputs.skip == 'false'
         shell: bash
         run: |
           set -o pipefail
           chmod +x gradlew
-          ./gradlew buildAndCollect 2>&1
+          ./gradlew buildAndCollect --console=plain 2>&1
 
-      - name: Publish to Modrinth, CurseForge, GitHub Releases
-        if: steps.version.outputs.skip == 'false'
+      - name: Upload jars
+        uses: actions/upload-artifact@v4
+        with:
+          name: mod-jars
+          path: build/libs/${{ needs.prepare.outputs.version }}/
+
+  publish-platforms:
+    needs: [prepare, build]
+    if: needs.prepare.outputs.skip == 'false'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - name: Download jars
+        uses: actions/download-artifact@v4
+        with:
+          name: mod-jars
+          path: build/libs/${{ needs.prepare.outputs.version }}
+
+      - name: Download changelog
+        uses: actions/download-artifact@v4
+        with:
+          name: changelog
+          path: /tmp
+
+      - name: Publish to Modrinth and CurseForge
         uses: Kir-Antipov/mc-publish@v3.3
         with:
           modrinth-id: ${{ vars.MODRINTH_PROJECT_ID }}
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
           curseforge-id: ${{ vars.CURSEFORGE_PROJECT_ID }}
           curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          name: Daily Menu Panoramas v${{ steps.version.outputs.version }}
-          version: v${{ steps.version.outputs.version }}
-          files: build/libs/${{ steps.version.outputs.version }}/*.jar
+          name: Daily Menu Panoramas v${{ needs.prepare.outputs.version }} for ${{ matrix.mc_version }}
+          version: v${{ needs.prepare.outputs.version }}+${{ matrix.mc_version }}
+          version-type: release
+          files: build/libs/${{ needs.prepare.outputs.version }}/daily_menu_panoramas-${{ needs.prepare.outputs.version }}+${{ matrix.mc_version }}.jar
           loaders: fabric
-          game-versions: '${{ steps.meta.outputs.game_versions }}'
+          game-versions: ${{ matrix.mc_version }}
+          game-version-filter: none
+          java: ${{ matrix.java }}
           changelog-file: /tmp/changelog.md
           curseforge-changelog-file: /tmp/changelog_curse.txt
           dependencies: |
-            fabric(required){modrinth:P7dR8mSH}{curseforge:306612}
-            fabric-language-kotlin(required){modrinth:Ha28R6CL}{curseforge:308769}
+            fabric@${{ matrix.fabric_api }}(required){modrinth:P7dR8mSH}{curseforge:306612}
+            fabric-language-kotlin@${{ matrix.kotlin_loader }}(required){modrinth:Ha28R6CL}{curseforge:308769}
+            modmenu@${{ matrix.modmenu }}(optional){modrinth:mOgUt4GM}{curseforge:308702}
+            yet_another_config_lib@${{ matrix.yacl }}(optional){modrinth:1eAoo2KR}{curseforge:667299}
+
+  publish-github:
+    needs: [prepare, build]
+    if: needs.prepare.outputs.skip == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download jars
+        uses: actions/download-artifact@v4
+        with:
+          name: mod-jars
+          path: build/libs/${{ needs.prepare.outputs.version }}
+
+      - name: Download changelog
+        uses: actions/download-artifact@v4
+        with:
+          name: changelog
+          path: /tmp
+
+      - name: Publish to GitHub Releases
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-tag: v${{ needs.prepare.outputs.version }}
+          github-generate-changelog: false
+          name: Daily Menu Panoramas v${{ needs.prepare.outputs.version }}
+          version: v${{ needs.prepare.outputs.version }}
+          version-type: release
+          files: build/libs/${{ needs.prepare.outputs.version }}/*.jar
+          changelog-file: /tmp/changelog.md
+
+  publish-gitgay:
+    needs: [prepare, build]
+    if: needs.prepare.outputs.skip == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download jars
+        uses: actions/download-artifact@v4
+        with:
+          name: mod-jars
+          path: build/libs/${{ needs.prepare.outputs.version }}
+
+      - name: Download changelog
+        uses: actions/download-artifact@v4
+        with:
+          name: changelog
+          path: /tmp
 
       - name: Publish to git.gay
-        if: steps.version.outputs.skip == 'false'
         uses: akkuman/gitea-release-action@v1
         with:
           server_url: https://git.gay
           repository: huhuhuhuheh/daily-menu-panoramas
           token: ${{ secrets.GITGAY_TOKEN }}
-          tag_name: v${{ steps.version.outputs.version }}
-          name: Daily Menu Panoramas v${{ steps.version.outputs.version }}
+          tag_name: v${{ needs.prepare.outputs.version }}
+          name: Daily Menu Panoramas v${{ needs.prepare.outputs.version }}
           body_path: /tmp/changelog.md
-          files: build/libs/${{ steps.version.outputs.version }}/*
+          files: build/libs/${{ needs.prepare.outputs.version }}/*
