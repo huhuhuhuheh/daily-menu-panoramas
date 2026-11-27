@@ -130,7 +130,7 @@ jobs:
 
       - name: Upload changelog
         if: steps.meta.outputs.skip == 'false'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: changelog
           path: |
@@ -160,7 +160,7 @@ jobs:
           ./gradlew buildAndCollect 2>&1
 
       - name: Upload jars
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: jars
           path: build/libs/${{ needs.prepare.outputs.version }}/
@@ -174,13 +174,13 @@ jobs:
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     steps:
       - name: Download jars
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: jars
           path: build/libs/${{ needs.prepare.outputs.version }}
 
       - name: Download changelog
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: changelog
           path: .
@@ -227,13 +227,13 @@ jobs:
       contents: write
     steps:
       - name: Download jars
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: jars
           path: build/libs/${{ needs.prepare.outputs.version }}
 
       - name: Download changelog
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: changelog
           path: .
@@ -254,13 +254,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download jars
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: jars
           path: build/libs/${{ needs.prepare.outputs.version }}
 
       - name: Download changelog
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: changelog
           path: .
