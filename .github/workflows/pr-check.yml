@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ !(github.event.pull_request.head.ref == 'l10n_crowdin' && github.event.pull_request.user.login == 'crowdin-bot') && github.event.pull_request.user.login != 'renovate[bot]' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
