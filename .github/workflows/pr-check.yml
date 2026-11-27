@@ -11,12 +11,15 @@ jobs:
   check-panorama:
     runs-on: ubuntu-latest
     if: ${{ !(github.event.pull_request.head.ref == 'l10n_crowdin' && github.event.pull_request.user.login == 'crowdin-bot') && github.event.pull_request.user.login != 'renovate[bot]' }}
-    container:
-      image: cimg/openjdk:21.0.12
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
 
       - name: Check for panorama changes
         id: check
@@ -32,16 +35,30 @@ jobs:
             echo "detected=false" >> $GITHUB_OUTPUT
             exit 0
           fi
-          if [ -z "$LOGIC_CHANGED" ]; then
-            echo "PanoramaLogic.kt was not modified. Halting."
+
+          LOGIC_FILE="src/main/kotlin/net/swilia/dailymenupanoramas/client/PanoramaLogic.kt"
+          SCAN_LINE=$(grep -E "private const val MAX_SCAN_INDEX = [0-9]+" "$LOGIC_FILE" || true)
+          if [ -z "$SCAN_LINE" ]; then
+            echo "MAX_SCAN_INDEX constant not found in PanoramaLogic.kt. Halting."
             echo "detected=false" >> $GITHUB_OUTPUT
             exit 0
           fi
-          LINE=$(sed -n '14p' src/main/kotlin/net/swilia/dailymenupanoramas/client/PanoramaLogic.kt)
-          if ! echo "$LINE" | grep -qE "private const val NUM_NUMERIC_PANORAMAS = [0-9]+"; then
-            echo "Line 14 of PanoramaLogic.kt does not look valid. Halting."
-            echo "detected=false" >> $GITHUB_OUTPUT
-            exit 0
+          MAX_SCAN_INDEX=$(echo "$SCAN_LINE" | grep -oE "[0-9]+$")
+
+          if [ -n "$NUMERIC_CHANGED" ]; then
+            HIGHEST_INDEX=$(echo "$NUMERIC_CHANGED" \
+              | grep -oE "numeric/[0-9]+/" \
+              | grep -oE "[0-9]+" \
+              | sort -n | tail -1)
+            if [ -n "$HIGHEST_INDEX" ] && [ "$HIGHEST_INDEX" -gt "$MAX_SCAN_INDEX" ]; then
+              echo "Numeric panorama $HIGHEST_INDEX exceeds MAX_SCAN_INDEX=$MAX_SCAN_INDEX. Bump the cap in PanoramaLogic.kt."
+              echo "detected=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
+
+          if [ -z "$LOGIC_CHANGED" ]; then
+            echo "PanoramaLogic.kt was not modified; numeric panoramas are auto-discovered and the current MAX_SCAN_INDEX covers the submission."
           fi
           echo "Panorama changes detected. Proceeding."
           echo "detected=true" >> $GITHUB_OUTPUT
@@ -84,7 +101,7 @@ jobs:
         run: |
           set -o pipefail
           chmod +x gradlew
-          ./gradlew build 2>&1 | tee /tmp/build_output.txt
+          ./gradlew buildAndCollect 2>&1 | tee /tmp/build_output.txt
 
       - name: Post success comment
         if: steps.check.outputs.detected == 'true' && success()

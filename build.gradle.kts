@@ -2,105 +2,90 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "2.2.21"
-    id("fabric-loom") version "1.13-SNAPSHOT"
+    kotlin("jvm") version "2.3.20"
+    id("dev.kikugie.loom-back-compat")
     id("maven-publish")
 }
 
-version = project.property("mod_version") as String
-group = project.property("maven_group") as String
+version = "${sc.properties["mod.version"]}+${sc.current.version}"
+base.archivesName = sc.properties["mod.id"] as String
 
-base {
-    archivesName.set(project.property("archives_base_name") as String)
+val requiredJava: JavaVersion = when {
+    sc.current.parsed >= "26.1" -> JavaVersion.VERSION_25
+    else -> JavaVersion.VERSION_21
 }
-
-val targetJavaVersion = 21
-java {
-    toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
-    // Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
-    // if it is present.
-    // If you remove this line, sources will not be generated.
-    withSourcesJar()
-}
-
-
 
 repositories {
-    maven { url = uri("https://maven.isxander.dev/releases") }
+    maven("https://maven.quiltmc.org/repository/release") { name = "Quilt" }
     exclusiveContent {
-        forRepository {
-            maven {
-                name = "Modrinth"
-                url = uri("https://api.modrinth.com/maven")
-            }
-        }
-        filter {
-            includeGroup("maven.modrinth")
-        }
+        forRepository { maven("https://maven.isxander.dev/releases") }
+        filter { includeGroup("dev.isxander") }
+    }
+    exclusiveContent {
+        forRepository { maven("https://api.modrinth.com/maven") { name = "Modrinth" } }
+        filter { includeGroup("maven.modrinth") }
     }
 }
 
 dependencies {
-    // To change the versions see the gradle.properties file
-    minecraft("com.mojang:minecraft:${project.property("minecraft_version")}")
-    mappings("net.fabricmc:yarn:${project.property("yarn_mappings")}:v2")
-    modImplementation("net.fabricmc:fabric-loader:${project.property("loader_version")}")
-    modImplementation("net.fabricmc:fabric-language-kotlin:${project.property("kotlin_loader_version")}")
+    minecraft("com.mojang:minecraft:${sc.current.version}")
+    if (sc.current.parsed >= "26.1") {
+        loomx.applyMojangMappings()
+    } else {
+        mappings("net.fabricmc:yarn:${sc.properties["deps.yarn"]}:v2")
+    }
 
-    modImplementation("net.fabricmc.fabric-api:fabric-api:${project.property("fabric_version")}")
-    modImplementation("dev.isxander:yet-another-config-lib:${project.property("yacl_version")}")
-    modImplementation("maven.modrinth:mOgUt4GM:${project.property("modmenu_version")}")
+    modImplementation("net.fabricmc:fabric-loader:${sc.properties["deps.fabric_loader"]}")
+    modImplementation("net.fabricmc:fabric-language-kotlin:${sc.properties["deps.kotlin_loader"]}")
+    modImplementation("net.fabricmc.fabric-api:fabric-api:${sc.properties["deps.fabric_api"]}")
+    modImplementation("dev.isxander:yet-another-config-lib:${sc.properties["deps.yacl"]}")
+    modImplementation("maven.modrinth:mOgUt4GM:${sc.properties["deps.modmenu"]}")
 }
 
-tasks.processResources {
-    inputs.property("version", project.version)
-    inputs.property("minecraft_version", project.property("minecraft_version"))
-    inputs.property("loader_version", project.property("loader_version"))
-    filteringCharset = "UTF-8"
-
-    filesMatching("fabric.mod.json") {
-        expand(
-            "version" to project.version,
-            "minecraft_version" to project.property("minecraft_version"),
-            "loader_version" to project.property("loader_version"),
-            "kotlin_loader_version" to project.property("kotlin_loader_version")
-        )
+java {
+    withSourcesJar()
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(requiredJava.majorVersion.toInt())
     }
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    // ensure that the encoding is set to UTF-8, no matter what the system default is
-    // this fixes some edge cases with special characters not displaying correctly
-    // see http://yodaconditions.net/blog/fix-for-java-file-encoding-problems-with-gradle.html
-    // If Javadoc is generated, this must be specified in that task too.
     options.encoding = "UTF-8"
-    options.release.set(targetJavaVersion)
+    options.release.set(requiredJava.majorVersion.toInt())
 }
 
 tasks.withType<KotlinCompile>().configureEach {
-    compilerOptions.jvmTarget.set(JvmTarget.fromTarget(targetJavaVersion.toString()))
+    compilerOptions.jvmTarget.set(JvmTarget.fromTarget(requiredJava.majorVersion))
+}
+
+tasks.processResources {
+    val props = buildMap {
+        fun register(key: String, value: String) {
+            inputs.property(key, value)
+            put(key, value)
+        }
+        register("version", project.version.toString())
+        register("minecraft", sc.properties["mod.mc_compat"] as String)
+        register("loader", Regex("\\d+\\.\\d+").find(sc.properties["deps.fabric_loader"] as String)!!.value)
+        register("kotlin_loader_version", sc.properties["deps.kotlin_loader"] as String)
+        register("modmenu_version", sc.properties["deps.modmenu"] as String)
+        register("yacl_version", sc.properties["deps.yacl"] as String)
+        register("java", requiredJava.majorVersion.toString())
+    }
+    filteringCharset = "UTF-8"
+    filesMatching("fabric.mod.json") { expand(props) }
+    filesMatching("*.mixins.json") { expand("java" to requiredJava.majorVersion.toString()) }
+}
+
+tasks.register<Copy>("buildAndCollect") {
+    group = "build"
+    description = "Builds the mod jar and copies it to build/libs/<mod version>/"
+    from(loomx.modJar.flatMap { it.archiveFile })
+    into(rootProject.layout.buildDirectory.dir("libs/${sc.properties["mod.version"]}"))
 }
 
 tasks.jar {
     from("LICENSE") {
         rename { "${it}_${project.base.archivesName.get()}" }
-    }
-}
-
-// configure the maven publication
-publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            artifactId = project.property("archives_base_name") as String
-            from(components["java"])
-        }
-    }
-
-    // See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
-    repositories {
-        // Add repositories to publish to here.
-        // Notice: This block does NOT have the same function as the block in the top level.
-        // The repositories here will be used for publishing your artifact, not for
-        // retrieving dependencies.
     }
 }

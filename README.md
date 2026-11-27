@@ -1,12 +1,17 @@
 ## Daily Menu Panoramas
 <img alt="image" src="https://github.com/user-attachments/assets/2dd6156a-7a41-46f2-900b-fefe554f4c86" />
 
+<div align="center">
+<a href="https://modrinth.com/project/bsrPC26E" target="_blank"><img alt="modrinth" height="56" src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy-minimal/available/modrinth_64h.png"></a>
+<a href="https://www.curseforge.com/minecraft/mc-mods/daily-menu-panoramas" target="_blank"><img alt="curseforge" height="56" src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy-minimal/available/curseforge_64h.png"></a>
+<a href="https://github.com/huhuhuhuheh/daily-menu-panoramas" target="_blank"><img alt="github" height="56" src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy-minimal/available/github_64h.png"></a>
+<a href="https://crowdin.com/project/daily-menu-panoramas" target="_blank"><img alt="crowdin" height="56" src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy-minimal/translate/crowdin_64h.png"></a>
 
-![Last Release](https://img.shields.io/github/v/release/huhuhuhuheh/daily-menu-panoramas)
-![Issues](https://img.shields.io/github/issues/huhuhuhuheh/daily-menu-panoramas?style=flat&color=orange)
-[![Supported Minecraft](https://img.shields.io/badge/Minecraft-1.21.5_--_1.21.11-purple?style=flat)](https://modrinth.com/project/bsrPC26E)
 ![Trans Rights!!!!!!!!!!!](https://pride-badges.pony.workers.dev/static/v1?label=trans%20rights&stripeWidth=6&stripeColors=5BCEFA,F5A9B8,FFFFFF,F5A9B8,5BCEFA)
-[![Crowdin](https://badges.crowdin.net/daily-menu-panoramas/localized.svg)](https://crowdin.com/project/daily-menu-panoramas)
+
+<a href="https://modrinth.com/project/P7dR8mSH" target="_blank"><img alt="fabric-api" height="40" src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/compact/requires/fabric-api_46h.png"></a>
+<a href="https://ko-fi.com/whyiexist" target="_blank"><img alt="kofi-singular-alt" height="40" src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/compact/donate/kofi-singular-alt_46h.png"></a>
+</div>
 
 Source for the mod that changes your panorama daily, or by season or event!
 

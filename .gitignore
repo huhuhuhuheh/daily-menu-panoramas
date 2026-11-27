@@ -5,6 +5,8 @@ build/
 out/
 classes/
 
+.kotlin
+
 # eclipse
 
 *.launch
@@ -31,6 +33,10 @@ bin/
 # fabric
 
 run/
+
+# stonecutter
+
+versions/
 
 # java
 

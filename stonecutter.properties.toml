@@ -1,0 +1,86 @@
+mod.id = "daily_menu_panoramas"
+mod.name = "Daily Menu Panoramas"
+mod.group = "net.swilia"
+mod.version = "1.2.4"
+
+deps.fabric_loader = "0.19.5"
+deps.kotlin_loader = "1.13.10+kotlin.2.3.20"
+
+loomx.loom_version = "1.19-SNAPSHOT"
+
+["1.21.5"]
+mod.mc_compat = "~1.21.5"
+mod.mc_releases = ["1.21.5"]
+deps.yarn = "1.21.5+build.1"
+deps.fabric_api = "0.128.2+1.21.5"
+deps.modmenu = "14.0.2"
+deps.yacl = "3.8.1+1.21.5-fabric"
+
+["1.21.6"]
+mod.mc_compat = "~1.21.6"
+mod.mc_releases = ["1.21.6"]
+deps.yarn = "1.21.6+build.1"
+deps.fabric_api = "0.128.2+1.21.6"
+deps.modmenu = "15.0.2"
+deps.yacl = "3.8.1+1.21.6-fabric"
+
+["1.21.7"]
+mod.mc_compat = "~1.21.7"
+mod.mc_releases = ["1.21.7"]
+deps.yarn = "1.21.7+build.8"
+deps.fabric_api = "0.128.2+1.21.7"
+deps.modmenu = "15.0.2"
+deps.yacl = "3.8.1+1.21.6-fabric"
+
+["1.21.8"]
+mod.mc_compat = "~1.21.8"
+mod.mc_releases = ["1.21.8"]
+deps.yarn = "1.21.8+build.1"
+deps.fabric_api = "0.136.0+1.21.8"
+deps.modmenu = "15.0.2"
+deps.yacl = "3.8.1+1.21.6-fabric"
+
+["1.21.9"]
+mod.mc_compat = "~1.21.9"
+mod.mc_releases = ["1.21.9"]
+deps.yarn = "1.21.9+build.1"
+deps.fabric_api = "0.133.14+1.21.9"
+deps.modmenu = "16.0.1"
+deps.yacl = "3.8.0+1.21.9-fabric"
+
+["1.21.10"]
+mod.mc_compat = "~1.21.10"
+mod.mc_releases = ["1.21.10"]
+deps.yarn = "1.21.10+build.3"
+deps.fabric_api = "0.138.4+1.21.10"
+deps.modmenu = "16.0.1"
+deps.yacl = "3.8.1+1.21.10-fabric"
+
+["1.21.11"]
+mod.mc_compat = "~1.21.11"
+mod.mc_releases = ["1.21.11"]
+deps.yarn = "1.21.11+build.6"
+deps.fabric_api = "0.141.6+1.21.11"
+deps.modmenu = "17.0.1"
+deps.yacl = "3.8.1+1.21.11-fabric"
+
+["26.1.2"]
+mod.mc_compat = "~26.1.2"
+mod.mc_releases = ["26.1.2"]
+deps.fabric_api = "0.155.3+26.1.2"
+deps.modmenu = "18.0.2"
+deps.yacl = "3.9.7+26.2-fabric"
+
+["26.2"]
+mod.mc_compat = "~26.2"
+mod.mc_releases = ["26.2"]
+deps.fabric_api = "0.161.0+26.2"
+deps.modmenu = "20.0.3"
+deps.yacl = "3.9.7+26.2-fabric"
+
+["26.3"]
+mod.mc_compat = "~26.3"
+mod.mc_releases = ["26.3"]
+deps.fabric_api = "0.167.0+26.3"
+deps.modmenu = "21.0.1"
+deps.yacl = "3.9.7+26.3-fabric"

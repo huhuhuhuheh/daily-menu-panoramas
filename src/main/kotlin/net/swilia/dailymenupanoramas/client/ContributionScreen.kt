@@ -1,9 +1,9 @@
 package net.swilia.dailymenupanoramas.client
 
+//? if <26.1 {
 import net.minecraft.client.gui.DrawContext
 import net.minecraft.client.gui.screen.Screen
 import net.minecraft.client.gui.widget.ButtonWidget
-import net.minecraft.text.StringVisitable
 import net.minecraft.text.Text
 import net.minecraft.util.Formatting
 import net.minecraft.util.Util
@@ -114,3 +114,6 @@ class ContributionScreen(private val parent: Screen?) : Screen(Text.translatable
         client?.setScreen(parent)
     }
 }
+//?} else {
+/*class ContributionScreen(private val parent: Any?)
+*///?}

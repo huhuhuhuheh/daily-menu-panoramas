@@ -22,6 +22,7 @@ public class TitleScreenMixin {
 
     @Inject(method = "init", at = @At("HEAD"))
     private void onInit(CallbackInfo ci) {
+        PanoramaLogic.INSTANCE.ensureCurrentPackRegistered();
         Identifier panoramaId = PanoramaLogic.INSTANCE.getPanoramaId();
         MinecraftClient client = MinecraftClient.getInstance();
 
@@ -31,6 +32,7 @@ public class TitleScreenMixin {
             client.getTextureManager().getTexture(faceIdentifier);
         }
 
+        //? if <26.1 {
         if (!hasCheckedContribution) {
             hasCheckedContribution = true;
             ContributionConfig.INSTANCE.load();
@@ -42,5 +44,6 @@ public class TitleScreenMixin {
                 }
             }
         }
+        //?}
     }
 }
